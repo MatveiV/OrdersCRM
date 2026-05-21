@@ -10,9 +10,9 @@ graph TB
     Frontend -->|HTTP API| Nginx[" Nginx<br/>(Reverse Proxy)"]
     Nginx -->|Проксирует| Backend["⚙️ Backend<br/>(FastAPI)"]
     Backend -->|SQL| Postgres["🗄️ PostgreSQL<br/>(crm_db)"]
-    Admin["‍💼 Администратор"] -->|Управление| pgAdmin["📊 pgAdmin<br/>(Web UI)"]
+    Admin["👨‍ Администратор"] -->|Управление| pgAdmin["📊 pgAdmin<br/>(Web UI)"]
     pgAdmin -->|SQL| Postgres
-    DevOps["🔧 DevOps"] -->|docker login| Registry[" Docker Registry<br/>(порт 8080)"]
+    DevOps[" DevOps"] -->|docker login| Registry["📦 Docker Registry<br/>(порт 8080)"]
     Registry -->|Хранит образы| Backend
     
     style Nginx fill:#4CAF50,color:#fff
@@ -28,10 +28,10 @@ graph TB
 graph TB
     subgraph "Сервер 185.87.48.13"
         subgraph "Docker Network: crm_network"
-            Nginx[" Nginx<br/>nginx:alpine<br/>Порты: 80, 443"]
-            Backend["️ Backend<br/>FastAPI<br/>Порт: 8000 (внутр.)"]
-            Postgres["🗄️ PostgreSQL<br/>postgres:16-alpine<br/>Порт: 5432 (внутр.)"]
-            pgAdmin[" pgAdmin<br/>dpage/pgadmin4<br/>Порт: 5050"]
+            Nginx["🔒 Nginx<br/>nginx:alpine<br/>Порты: 80, 443"]
+            Backend["⚙️ Backend<br/>FastAPI<br/>Порт: 8000 (внутр.)"]
+            Postgres["️ PostgreSQL<br/>postgres:16-alpine<br/>Порт: 5432 (внутр.)"]
+            pgAdmin["📊 pgAdmin<br/>dpage/pgadmin4<br/>Порт: 5050"]
             Registry["📦 Docker Registry<br/>registry:2<br/>Порт: 8080"]
         end
     end
@@ -51,27 +51,68 @@ graph TB
     style Registry fill:#607D8B,color:#fff
 ```
 
-### C4 Level 3 - Component Diagram (Backend)
+### UML - ER Diagram
 
 ```mermaid
-graph TB
-    subgraph "Backend (FastAPI)"
-        API[" API Endpoints<br/>/api/leads<br/>/health"]
-        Models["📋 Pydantic Models<br/>LeadCreate<br/>LeadResponse"]
-        DB["🗄️ Database Layer<br/>asyncpg Pool"]
-        Security["🔐 Security<br/>CORS Middleware<br/>IP Filtering"]
-    end
+erDiagram
+    LEADS {
+        int id PK
+        varchar first_name
+        varchar last_name
+        varchar middle_name
+        text contact_data
+        varchar business_niche
+        varchar company_size
+        varchar task_volume
+        varchar role
+        text business_info
+        varchar budget
+        varchar project_deadline
+        varchar task_type
+        varchar product_interest
+        varchar preferred_contact_method
+        varchar convenient_time
+        text comment
+        timestamp created_at
+        timestamp updated_at
+    }
     
-    Nginx["🔒 Nginx"] -->|HTTP| API
-    API -->|Валидация| Models
-    API -->|SQL запросы| DB
-    API -->|Проверка| Security
-    DB -->|SQL| Postgres["🗄️ PostgreSQL"]
+    BEHAVIORS {
+        int lead_id PK,FK
+        float time_spent_seconds
+        text buttons_clicked
+        text cursor_hover_zones
+        int return_count
+        int page_views
+        float scroll_depth_percent
+        varchar device_type
+        varchar browser
+        varchar os
+        varchar screen_resolution
+        varchar ip_address
+        text user_agent
+        varchar referrer
+        varchar utm_source
+        varchar utm_medium
+        varchar utm_campaign
+        timestamp created_at
+        timestamp updated_at
+    }
     
-    style API fill:#2196F3,color:#fff
-    style Models fill:#FF9800,color:#fff
-    style DB fill:#4CAF50,color:#fff
-    style Security fill:#F44336,color:#fff
+    ADMIN_DATA {
+        int id PK
+        text service_name
+        text budget_range
+        text available_products
+        text contact_methods
+        jsonb form_settings
+        jsonb ui_config
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    LEADS ||--|| BEHAVIORS : "1-to-1"
 ```
 
 ### UML - Sequence Diagram (Создание лида)
@@ -82,160 +123,105 @@ sequenceDiagram
     participant N as Nginx
     participant B as Backend (FastAPI)
     participant D as PostgreSQL
-    participant P as pgAdmin
 
     C->>N: POST /api/leads (JSON данные)
     N->>B: Проксирует запрос
-    B->>B: Валидация данных (Pydantic)
-    B->>B: Сбор метрик (IP, User-Agent)
+    B->>B: Валидация (Pydantic)
     B->>D: INSERT INTO leads (...)
-    D-->>B: RETURNING id, created_at
-    B-->>N: 200 OK {id, created_at, contact_name}
+    D-->>B: RETURNING id
+    B-->>N: 201 Created {id, first_name, ...}
     N-->>C: JSON ответ
     
-    Note over P,D: Администратор<br/>просматривает лиды<br/>через pgAdmin
-    P->>D: SELECT * FROM leads
-    D-->>P: Данные лидов
+    C->>N: POST /api/behaviors (метрики)
+    N->>B: Проксирует запрос
+    B->>D: INSERT INTO behaviors (lead_id, ...)
+    D-->>B: OK
+    B-->>N: 201 Created
+    N-->>C: JSON ответ
 ```
 
-### UML - ER Diagram (База данных)
+## Структура проекта
 
-```mermaid
-erDiagram
-    LEADS {
-        int id PK
-        timestamp created_at
-        timestamp updated_at
-        varchar contact_name
-        varchar contact_phone
-        varchar contact_email
-        text business_info
-        varchar budget
-        varchar contact_method
-        text comments
-        jsonb lead_metrics
-        jsonb technical_info
-        text source_url
-        varchar utm_source
-        varchar utm_medium
-        varchar utm_campaign
-        inet ip_address
-        text user_agent
-        varchar status
-        boolean processed
-    }
-    
-    LEAD_SOURCES {
-        int id PK
-        varchar source_name
-        timestamp created_at
-    }
-    
-    AUDIT_LOG {
-        int id PK
-        timestamp created_at
-        varchar table_name
-        int record_id
-        varchar action
-        jsonb old_data
-        jsonb new_data
-        varchar changed_by
-    }
-    
-    LEADS ||--o{ AUDIT_LOG : "tracked_by"
-    LEAD_SOURCES ||--o{ LEADS : "referenced_by"
+```
+backend/
+├── app/
+│   ├── main.py              # Точка входа, роутер
+│   ├── core/
+│   │   └── database.py      # Подключение к PostgreSQL
+│   ├── models/
+│   │   ├── lead.py          # Lead модель + CRUD
+│   │   ├── behavior.py      # Behavior модель + CRUD
+│   │   └── admin.py         # AdminData модель + CRUD
+│   └── routes/
+│       ├── lead.py          # Роуты /api/leads
+│       ├── behavior.py      # Роуты /api/behaviors
+│       └── admin.py         # Роуты /api/admin
+├── db/
+│   └── init.sql             # Инициализация БД
+├── nginx/
+│   ├── nginx.conf
+│   └── conf.d/crm.conf      # Прокси на backend
+├── registry/
+│   └── auth/registry.htpasswd
+── docker-compose.yml
+├── .env
+├── Dockerfile
+└── requirements.txt
 ```
 
-### UML - Class Diagram (Backend Models)
+## API Endpoints
 
-```mermaid
-classDiagram
-    class LeadCreate {
-        +str contact_name
-        +str contact_phone
-        +EmailStr contact_email
-        +str business_info
-        +str budget
-        +str contact_method
-        +str comments
-        +dict lead_metrics
-        +dict technical_info
-        +str source_url
-        +str utm_source
-        +str utm_medium
-        +str utm_campaign
-    }
-    
-    class LeadResponse {
-        +int id
-        +datetime created_at
-        +str contact_name
-    }
-    
-    class LeadModel {
-        +int id
-        +datetime created_at
-        +datetime updated_at
-        +str contact_name
-        +str contact_phone
-        +str contact_email
-        +str business_info
-        +str budget
-        +str contact_method
-        +str comments
-        +dict lead_metrics
-        +dict technical_info
-        +str source_url
-        +str utm_source
-        +str utm_medium
-        +str utm_campaign
-        +str ip_address
-        +str user_agent
-        +str status
-        +bool processed
-    }
-    
-    class DatabaseService {
-        +Pool pool
-        +async create_pool()
-        +async execute_query()
-        +async fetch_lead()
-    }
-    
-    LeadCreate --> LeadModel : "creates"
-    LeadModel --> LeadResponse : "returns"
-    DatabaseService --> LeadModel : "manages"
-```
+### Leads
 
-## Компоненты системы
+| Метод | Путь | Описание |
+|-------|------|----------|
+| POST | `/api/leads/` | Создать лид |
+| GET | `/api/leads/` | Список лидов |
+| GET | `/api/leads/{id}` | Получить лид |
+| PUT | `/api/leads/{id}` | Обновить лид |
+| DELETE | `/api/leads/{id}` | Удалить лид |
 
-| Сервис | Образ | Порт | Описание |
-|--------|-------|------|----------|
-| **Nginx** | nginx:alpine | 80, 443 | Reverse proxy, статика, изоляция API |
-| **PostgreSQL** | postgres:16-alpine | 5432 (внутр.) | База данных лидов |
-| **pgAdmin** | dpage/pgadmin4:latest | 5050 | Web-интерфейс для управления БД |
-| **Docker Registry** | registry:2 | 8080 | Локальный репозиторий образов |
+### Behaviors
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| POST | `/api/behaviors/` | Создать поведение |
+| GET | `/api/behaviors/` | Список поведений |
+| GET | `/api/behaviors/{lead_id}` | Получить поведение |
+| PUT | `/api/behaviors/{lead_id}` | Обновить поведение |
+| DELETE | `/api/behaviors/{lead_id}` | Удалить поведение |
+
+### Admin
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| POST | `/api/admin/` | Создать конфиг |
+| GET | `/api/admin/` | Список конфигов |
+| GET | `/api/admin/active` | Активный конфиг |
+| GET | `/api/admin/{id}` | Получить конфиг |
+| PUT | `/api/admin/{id}` | Обновить конфиг |
+| DELETE | `/api/admin/{id}` | Удалить конфиг |
+
+### Health
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET | `/health` | Проверка статуса |
 
 ## Быстрый старт
 
-### 1. Подключение к серверу
+### 1. Запуск
 
 ```bash
-# SSH подключение по ключу
-ssh -i C:\Users\MV\.ssh\six root@185.87.48.13
-
-# Или через алиас
-ssh orderscrm
+cd backend
+docker compose up -d --build
 ```
 
-### 2. Проверка контейнеров
+### 2. Проверка
 
 ```bash
-# Список запущенных контейнеров
 docker ps
-
-# С красивым форматированием
-docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+curl http://185.87.48.13/health
 ```
 
 ### 3. Доступ к сервисам
@@ -247,180 +233,20 @@ docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 | Registry | http://185.87.48.13:8080 | admin | crm_password |
 | PostgreSQL | 185.87.48.13:5432 | crm_user | crm_password |
 
-### 4. Работа с Registry
-
-```bash
-# Настройка insecure registry (Windows)
-# Добавить в %USERPROFILE%\.docker\daemon.json:
-{
-  "insecure-registries": ["185.87.48.13:8080"]
-}
-
-# Перезапустить Docker Desktop
-
-# Логин в registry
-docker login 185.87.48.13:8080
-# Username: admin
-# Password: crm_password
-
-# Пуш образа
-docker tag my-backend:latest 185.87.48.13:8080/orders-crm-backend:latest
-docker push 185.87.48.13:8080/orders-crm-backend:latest
-```
-
-## API Endpoints
-
-### POST /api/leads
-
-Создание нового лида (тёплый клиент).
-
-**Request:**
-```json
-{
-  "contact_name": "Иван Иванов",
-  "contact_phone": "+79001234567",
-  "contact_email": "ivan@example.com",
-  "business_info": "Интернет-магазин одежды",
-  "budget": "100000-200000",
-  "contact_method": "phone",
-  "comments": "Хочу CRM для управления заказами",
-  "lead_metrics": {
-    "form_fills": 3,
-    "time_on_page": 120,
-    "scroll_depth": 85
-  },
-  "technical_info": {
-    "browser": "Chrome",
-    "os": "Windows",
-    "device": "desktop"
-  },
-  "utm_source": "google",
-  "utm_medium": "cpc",
-  "utm_campaign": "summer_sale"
-}
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "created_at": "2026-05-21T12:00:00Z",
-  "contact_name": "Иван Иванов"
-}
-```
-
-### GET /health
-
-Проверка состояния сервиса.
-
-**Response:**
-```json
-{"status": "healthy"}
-```
-
-## Структура проекта
-
-```
-backend/
-├── app/
-│   ├── main.py          # FastAPI приложение
-│   ├── api/             # API endpoints
-│   ├── models/          # SQLAlchemy модели
-│   ├── schemas/         # Pydantic схемы
-│   └── services/        # Бизнес-логика
-├── db/
-│   └── init.sql         # Инициализация БД
-├── nginx/
-│   ├── nginx.conf       # Основная конфигурация
-│   └── conf.d/
-│       └── crm.conf     # Конфиг виртуальных хостов
-├── registry/
-│   ├── auth/
-│   │   ── registry.htpasswd  # Файл авторизации
-│   └── create-user.sh   # Скрипт создания пользователя
-── docker-compose.yml   # Конфигурация сервисов
-├── .env                 # Переменные окружения
-├── Dockerfile           # Сборка backend
-└── requirements.txt     # Python зависимости
-```
-
 ## Безопасность
 
-### Изоляция Backend
 - Backend недоступен напрямую извне
 - Все запросы проходят через Nginx
-- Nginx проксирует только `/api/` на backend
-- Директива `internal` блокирует внешний доступ
-
-### Сеть
-- Все сервисы в изолированной сети `crm_network`
 - PostgreSQL доступен только внутри сети
-- Открытые порты: 80, 443, 5050, 8080
+- Данные не покидают сервер
 
-### Данные
-- Все данные хранятся локально
-- Резервные копии в `postgres_data` volume
-- Аудит изменений в `audit_log` таблице
-
-## Мониторинг
+## Registry
 
 ```bash
-# Логи всех сервисов
-docker compose logs -f
+# Логин
+docker login 185.87.48.13:8080
 
-# Логи конкретного сервиса
-docker compose logs -f postgres
-
-# Статистика ресурсов
-docker stats
-
-# Проверка здоровья PostgreSQL
-docker compose exec postgres pg_isready -U crm_user -d crm_db
+# Пуш образа
+docker tag orders-crm-backend:latest 185.87.48.13:8080/orders-crm-backend:latest
+docker push 185.87.48.13:8080/orders-crm-backend:latest
 ```
-
-## Резервное копирование
-
-```bash
-# Бэкап базы данных
-docker compose exec postgres pg_dump -U crm_user crm_db > backup.sql
-
-# Восстановление
-docker compose exec -T postgres psql -U crm_user crm_db < backup.sql
-```
-
-## Устранение проблем
-
-### Не запускается PostgreSQL
-```bash
-docker compose logs postgres
-docker compose restart postgres
-```
-
-### Нет доступа к pgAdmin
-```bash
-# Проверьте порт
-netstat -tuln | grep 5050
-```
-
-### Ошибка подключения к Registry
-```bash
-# Проверьте htpasswd
-cat registry/auth/registry.htpasswd
-```
-
-### Контейнер перезапускается
-```bash
-# Проверьте логи
-docker logs <container_name>
-```
-
-## Следующие шаги
-
-1. ✅ Создать структуру проекта
-2. ✅ Настроить PostgreSQL
-3. ✅ Настроить Nginx с изоляцией
-4. ✅ Настроить Docker Registry
-5. ⏳ Добавить Backend сервис в docker-compose
-6. ⏳ Настроить SSL/TLS
-7. ⏳ Настроить мониторинг
-8. ⏳ Добавить CI/CD pipeline
