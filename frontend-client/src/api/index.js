@@ -12,7 +12,7 @@ export async function getAdminData() {
 }
 
 export async function submitLead(payload) {
-    const response = await fetch(`${API_BASE}/leads`, {
+    const response = await fetch(`${API_BASE}/leads/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

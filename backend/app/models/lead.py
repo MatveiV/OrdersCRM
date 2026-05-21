@@ -61,6 +61,8 @@ class LeadModel(Base):
 
 
 class LeadCreate(BaseModel):
+    model_config = {"extra": "ignore"}
+    
     first_name: str
     last_name: str
     middle_name: Optional[str] = None
