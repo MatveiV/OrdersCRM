@@ -25,7 +25,6 @@ erDiagram
         text created_at
         text updated_at
     }
-
     BEHAVIORS {
         int lead_id PK FK
         float time_spent_seconds
@@ -47,21 +46,19 @@ erDiagram
         text created_at
         text updated_at
     }
-
     ADMIN_DATA {
         int id PK
         text service_name
         text budget_range
         text available_products
         text contact_methods
-        jsonb form_settings
-        jsonb ui_config
+        text form_settings
+        text ui_config
         bool is_active
         text created_at
         text updated_at
     }
-
-    LEADS ||--|| BEHAVIORS : "1-to-1 (ON DELETE CASCADE)"
+    LEADS ||--|| BEHAVIORS : "1-to-1 ON DELETE CASCADE"
 ```
 
 ## Описание таблиц
@@ -123,8 +120,8 @@ erDiagram
 | budget_range | TEXT | | JSON диапазона бюджета |
 | available_products | TEXT | | Список продуктов |
 | contact_methods | TEXT | | Способы связи |
-| form_settings | JSONB | | Настройки формы |
-| ui_config | JSONB | | Конфигурация UI |
+| form_settings | TEXT | | Настройки формы |
+| ui_config | TEXT | | Конфигурация UI |
 | is_active | BOOLEAN | DEFAULT TRUE | Активная запись |
 | created_at | TEXT | | Дата создания |
 | updated_at | TEXT | | Дата обновления |
