@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matvei V — Системный аналитик и Vibe-кодер</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600&family=Comfortaa:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+    <div id="animated-bg"></div>
+    
+    <main class="container">
+        <section id="hero" class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title">Системный аналитик и Vibe-кодер с 20-летним опытом в FinTech</h1>
+                <p class="hero-subtitle">Торговая платформа, расчётная система или AI-агент под ваш процесс: Python + LLM-инструменты → MVP, который не нужно переписывать после первого релиза</p>
+                <p class="hero-about">Транслирую бизнес-требования в архитектурные решения и работающие MVP. Проектирую высоконагруженные системы, связываю бизнес и разработку — чтобы результат был не только быстрым, но и надёжным.</p>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-value">20+</span>
+                        <span class="metric-label">лет опыта</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value">30+</span>
+                        <span class="metric-label">проектов в портфолио</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value">5</span>
+                        <span class="metric-label">AI-провайдеров в единой архитектуре</span>
+                    </div>
+                </div>
+                
+                <div class="tech-stack">
+                    <span class="tech-badge">Python</span>
+                    <span class="tech-badge">Go</span>
+                    <span class="tech-badge">LLM</span>
+                    <span class="tech-badge">Docker</span>
+                    <span class="tech-badge">PostgreSQL</span>
+                </div>
+                
+                <a href="#lead-form" class="cta-button">Обсудить проект</a>
+            </div>
+        </section>
+        
+        <section id="projects" class="projects-section">
+            <h2 class="section-title">Проекты и результаты</h2>
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all">Все</button>
+                <button class="filter-tab" data-filter="ai">AI / LLM / Боты</button>
+                <button class="filter-tab" data-filter="infra">Инфраструктура и бэкенд</button>
+                <button class="filter-tab" data-filter="ml">ML / Финансы</button>
+            </div>
+            <div id="projects-grid" class="projects-grid"></div>
+        </section>
+        
+        <section id="lead-form-section" class="form-section">
+            <h2 class="section-title">Оставить заявку</h2>
+            <form id="lead-form" class="lead-form" novalidate>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="first_name">Имя <span class="required">*</span></label>
+                        <input type="text" id="first_name" name="first_name" required placeholder="Ваше имя">
+                        <span class="error-msg"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="last_name">Фамилия <span class="required">*</span></label>
+                        <input type="text" id="last_name" name="last_name" required placeholder="Ваша фамилия">
+                        <span class="error-msg"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="middle_name">Отчество</label>
+                        <input type="text" id="middle_name" name="middle_name" placeholder="Отчество (необязательно)">
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="contact_data">Контактные данные <span class="required">*</span></label>
+                        <input type="text" id="contact_data" name="contact_data" required placeholder="Email или телефон">
+                        <span class="error-msg"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="business_niche">Ниша бизнеса</label>
+                        <input type="text" id="business_niche" name="business_niche" placeholder="Ваша отрасль">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="company_size">Размер компании</label>
+                        <input type="range" id="company_size" name="company_size" min="0" max="4" step="1" value="2">
+                        <div class="range-labels">
+                            <span>1-10</span>
+                            <span>11-50</span>
+                            <span>51-200</span>
+                            <span>201-500</span>
+                            <span>500+</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="task_volume">Объём задачи</label>
+                        <input type="range" id="task_volume" name="task_volume" min="0" max="4" step="1" value="2">
+                        <div class="range-labels">
+                            <span>Малый</span>
+                            <span>Ниже среднего</span>
+                            <span>Средний</span>
+                            <span>Большой</span>
+                            <span>Очень большой</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role">Ваша роль</label>
+                        <select id="role" name="role">
+                            <option value="">Выберите роль</option>
+                            <option value="Сотрудник">Сотрудник</option>
+                            <option value="Руководитель">Руководитель</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="business_info">Информация о бизнесе</label>
+                        <textarea id="business_info" name="business_info" rows="3" placeholder="Расскажите о вашем бизнесе"></textarea>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="budget">Бюджет: <span id="budget-value">500 000 ₽</span></label>
+                        <input type="range" id="budget" name="budget" min="100000" max="5000000" step="100000" value="500000">
+                        <div class="budget-labels">
+                            <span>100 000 ₽</span>
+                            <span>5 000 000 ₽</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="project_deadline">Срок реализации</label>
+                        <input type="range" id="project_deadline" name="project_deadline" min="1" max="12" step="1" value="3">
+                        <div class="range-labels">
+                            <span>1 нед</span>
+                            <span>3 нед</span>
+                            <span>6 нед</span>
+                            <span>3 мес</span>
+                            <span>6 мес</span>
+                            <span>12 мес</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="task_type">Тип задачи</label>
+                        <select id="task_type" name="task_type">
+                            <option value="">Выберите тип</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product_interest">Интересующий продукт</label>
+                        <select id="product_interest" name="product_interest">
+                            <option value="">Выберите продукт</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>Предпочтительный способ связи</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="email"> Email</label>
+                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="phone"> Телефон</label>
+                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="telegram"> Telegram</label>
+                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="whatsapp"> WhatsApp</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="convenient_time">Удобное время связи</label>
+                        <input type="text" id="convenient_time" name="convenient_time" placeholder="Например: 10:00-18:00">
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="comment">Комментарий</label>
+                        <textarea id="comment" name="comment" rows="3" placeholder="Дополнительная информация"></textarea>
+                    </div>
+                </div>
+                
+                <button type="submit" class="submit-btn">
+                    <span class="btn-text">Отправить заявку</span>
+                    <span class="btn-loader" style="display:none;">Отправка...</span>
+                </button>
+            </form>
+            
+            <div id="success-message" class="success-message" style="display:none;">
+                <h3>Заявка отправлена!</h3>
+                <p>Мы свяжемся с вами в ближайшее время.</p>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="footer">
+        <p>&copy; 2026 Matvei V. Все права защищены.</p>
+    </footer>
+    
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
