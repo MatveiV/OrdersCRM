@@ -1,8 +1,88 @@
-# Orders CRM
+# Orders CRM — Документация
 
 Премиальная CRM-система для управления заявками тёплых клиентов.
 
-## Архитектура
+## Версии документации
+
+| Версия | Дата | Описание |
+|--------|------|----------|
+| [v1.0](#v10-2026-05-16) | 2026-05-16 | Инициализация проекта, базовая архитектура, FastAPI + PostgreSQL |
+| [v1.1](#v11-2026-05-17) | 2026-05-17 | Добавлен фронтенд (Vite + Vanilla JS), Glassmorphism UI, трекинг поведения |
+| [v1.2](#v12-2026-05-21) | 2026-05-21 | HTTPS, клиентский лендинг, админ-панель /admin, C4/UML диаграммы |
+
+---
+
+## v1.2 (2026-05-21)
+
+### Что нового
+
+- **HTTPS** — самоподписанный SSL-сертификат, HTTP→HTTPS redirect, security headers
+- **Клиентский лендинг** (`/`) — Hero-секция, портфолио проектов, форма заявки
+- **Админ-панель** (`/admin`) — перенесена старая форма на отдельный маршрут
+- **Дизайн-система** — светлая тема, Nunito/Nunito Sans/Comfortaa, золотые акценты
+- **Портфолио** — 13 карточек проектов с фильтрацией по категориям
+- **C4 и UML диаграммы** — полная визуализация архитектуры
+
+### Маршруты
+
+| Маршрут | Описание |
+|---------|----------|
+| `/` | Клиентский лендинг (Hero + Проекты + Форма) |
+| `/admin` | Админ-панель (старая форма заявки) |
+| `/api/leads/` | CRUD лидов |
+| `/api/behaviors/` | CRUD поведений |
+| `/api/admin/active` | Активные настройки фронтенда |
+| `/docs` | Swagger UI |
+| `/health` | Health check |
+
+### Диаграммы
+
+- [C4 Context Diagram](docs/diagrams/c4-context.md)
+- [C4 Container Diagram](docs/diagrams/c4-container.md)
+- [C4 Component Diagram](docs/diagrams/c4-component.md)
+- [UML Sequence — Lead Submission](docs/diagrams/uml-sequence-lead.md)
+- [UML Class Diagram](docs/diagrams/uml-class.md)
+- [UML ER Diagram](docs/diagrams/uml-er.md)
+
+---
+
+## v1.1 (2026-05-17)
+
+### Что нового
+
+- **Фронтенд** — Vite + Vanilla JS, Glassmorphism UI
+- **Трекинг поведения** — время на странице, клики, скролл, возвраты
+- **Динамические формы** — загрузка настроек из AdminData
+- **Анимации** — CSS + легковесный JS, золотые частицы
+- **Docker Registry** — локальный реестр образов на порту 8080
+
+### Фронтенд
+
+- Сборка: `npm run build` → `dist/`
+- Стили: Glassmorphism, тёмная тема, золотые акценты
+- Шрифты: Cormorant Garamond + Inter
+- Адаптивность: mobile, tablet, desktop
+
+### Бэкенд
+
+- Модели: Lead, Behavior (1:1), AdminData
+- Async SQLAlchemy + asyncpg
+- Pydantic валидация
+
+---
+
+## v1.0 (2026-05-16)
+
+### Что нового
+
+- **Инициализация проекта** — базовая структура
+- **FastAPI бэкенд** — CRUD API для лидов
+- **PostgreSQL 16** — основная БД
+- **Docker Compose** — оркестрация сервисов
+- **Nginx** — проксирование API, раздача статики
+- **pgAdmin** — управление БД
+
+### Архитектура
 
 ```mermaid
 graph TB
@@ -22,35 +102,7 @@ graph TB
     style Registry fill:#795548,color:#fff
 ```
 
-## Структура проекта
-
-```
-OrdersCRM/
-── frontend/               # Фронтенд (Vite + Vanilla JS)
-│   ├── dist/               # Сборка для продакшена
-│   ├── src/
-│   │   ├── main.js         # Точка входа
-│   │   ├── api/            # API запросы
-│   │   ├── tracking/       # Трекинг поведения
-│   │   ├── components/     # UI компоненты
-│   │   └── styles/         # CSS стили
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.js
-├── backend/                # Бэкенд (FastAPI)
-│   ├── app/
-│   │   ├── main.py         # FastAPI приложение
-│   │   ├── core/           # Конфигурация
-│   │   ├── models/         # SQLAlchemy модели
-│   │   └── routes/         # API роуты
-│   ├── db/init.sql         # Инициализация БД
-│   ├── nginx/              # Конфигурация Nginx
-│   ├── registry/           # Docker Registry
-│   ├── docker-compose.yml
-│   ├── Dockerfile
-│   └── requirements.txt
-── docs/                   # Документация
-```
+---
 
 ## Быстрый старт
 
@@ -68,7 +120,15 @@ cd backend
 docker compose up -d --build
 ```
 
-### 3. Сборка фронтенда
+### 3. Сборка фронтенда (клиентский лендинг)
+
+```bash
+cd frontend-client
+npm install
+npm run build
+```
+
+### 4. Сборка админ-панели
 
 ```bash
 cd frontend
@@ -76,15 +136,16 @@ npm install
 npm run build
 ```
 
-### 4. Деплой фронтенда
+### 5. Деплой
 
 ```bash
 # Копирование файлов на сервер
-scp -r dist/* root@185.87.48.13:/root/orders-crm-frontend/
+scp -r frontend-client/dist/* root@185.87.48.13:/tmp/
+scp -r frontend/dist/* root@185.87.48.13:/tmp/admin/
 
 # Копирование в nginx контейнер
-ssh root@185.87.48.13 "docker cp /root/orders-crm-frontend/index.html orderscrm_nginx:/usr/share/nginx/html/"
-ssh root@185.87.48.13 "docker cp /root/orders-crm-frontend/assets orderscrm_nginx:/usr/share/nginx/html/"
+ssh root@185.87.48.13 "docker cp /tmp/. orderscrm_nginx:/usr/share/nginx/html/"
+ssh root@185.87.48.13 "docker cp /tmp/admin/. orderscrm_nginx:/usr/share/nginx/html/admin/"
 ssh root@185.87.48.13 "docker restart orderscrm_nginx"
 ```
 
@@ -92,10 +153,11 @@ ssh root@185.87.48.13 "docker restart orderscrm_nginx"
 
 | Сервис | URL | Логин | Пароль |
 |--------|-----|-------|--------|
-| Сайт | http://185.87.48.13 | - | - |
-| Swagger Docs | http://185.87.48.13/docs | - | - |
-| pgAdmin | http://185.87.48.13:5050 | admin@orderscrm.ru | admin123 |
-| Registry | http://185.87.48.13:8080 | admin | crm_password |
+| Лендинг | https://185.87.48.13 | - | - |
+| Админ-панель | https://185.87.48.13/admin | - | - |
+| Swagger Docs | https://185.87.48.13/docs | - | - |
+| pgAdmin | https://185.87.48.13:5050 | admin@orderscrm.ru | admin123 |
+| Registry | https://185.87.48.13:8080 | admin | crm_password |
 | PostgreSQL | 185.87.48.13:5432 | crm_user | crm_password |
 
 ## API Endpoints
@@ -142,21 +204,21 @@ ssh root@185.87.48.13 "docker restart orderscrm_nginx"
 ### Технологии
 
 - **Сборка:** Vite
-- **Стили:** Чистый CSS (Glassmorphism)
-- **Шрифты:** Cormorant Garamond + Inter (Google Fonts)
+- **Стили:** Чистый CSS
+- **Шрифты:** Nunito, Nunito Sans, Comfortaa (лендинг); Cormorant Garamond, Inter (админ)
 - **Анимации:** CSS + легковесный JS
 
 ### Дизайн
 
-- Тёмный фон с золотыми акцентами (#D4AF37, #FFD700)
-- Glassmorphism эффект для формы
-- Анимированные золотые частицы на фоне
-- Адаптивная вёрстка (mobile, tablet, desktop)
+- Лендинг: светлая тема, индиго (#1E3A5F), золото (#D4AF37)
+- Админ: тёмная тема, золотые акценты (#D4AF37, #FFD700)
+- Glassmorphism эффект
+- Адаптивная вёрстка
 
 ### Функционал
 
 - Динамическая загрузка настроек из AdminData
-- Трекинг поведения пользователя (время, клики, скролл)
+- Трекинг поведения пользователя
 - Валидация формы на клиенте
 - Отправка единого пакета (lead + behavior)
 
@@ -221,6 +283,8 @@ docker push 185.87.48.13:8080/my-image:latest
 - PostgreSQL доступен только внутри Docker сети
 - Данные не покидают сервер
 - Аутентификация в Registry через htpasswd
+- HTTPS с SSL-сертификатом
+- Security headers (HSTS, X-Frame-Options, X-Content-Type-Options)
 
 ## Мониторинг
 
