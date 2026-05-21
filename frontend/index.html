@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders CRM — Премиальные решения для бизнеса</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+    <div id="animated-bg"></div>
+    
+    <main class="container">
+        <header class="header">
+            <h1 class="title">Orders CRM</h1>
+            <p class="subtitle">Премиальные решения для автоматизации вашего бизнеса</p>
+        </header>
+
+        <form id="lead-form" class="glass-form" novalidate>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="first_name">Имя <span class="required">*</span></label>
+                    <input type="text" id="first_name" name="first_name" required placeholder="Введите имя">
+                    <span class="error-msg"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="last_name">Фамилия <span class="required">*</span></label>
+                    <input type="text" id="last_name" name="last_name" required placeholder="Введите фамилию">
+                    <span class="error-msg"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="middle_name">Отчество</label>
+                    <input type="text" id="middle_name" name="middle_name" placeholder="Введите отчество">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="contact_data">Контактные данные <span class="required">*</span></label>
+                    <input type="text" id="contact_data" name="contact_data" required placeholder="Email или телефон">
+                    <span class="error-msg"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="business_niche">Ниша бизнеса</label>
+                    <input type="text" id="business_niche" name="business_niche" placeholder="Ваша отрасль">
+                </div>
+
+                <div class="form-group">
+                    <label for="company_size">Размер компании</label>
+                    <select id="company_size" name="company_size">
+                        <option value="">Выберите размер</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="task_volume">Объём задачи</label>
+                    <input type="text" id="task_volume" name="task_volume" placeholder="Опишите объём">
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Ваша роль</label>
+                    <select id="role" name="role">
+                        <option value="">Выберите роль</option>
+                        <option value="Сотрудник">Сотрудник</option>
+                        <option value="Руководитель">Руководитель</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="business_info">Информация о бизнесе</label>
+                    <textarea id="business_info" name="business_info" rows="3" placeholder="Расскажите о вашем бизнесе"></textarea>
+                </div>
+
+                <div class="form-group full-width budget-group">
+                    <label for="budget">Бюджет: <span id="budget-value">500 000 ₽</span></label>
+                    <input type="range" id="budget" name="budget" min="100000" max="5000000" step="100000" value="500000">
+                    <div class="budget-labels">
+                        <span>100 000 ₽</span>
+                        <span>5 000 000 ₽</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="project_deadline">Срок реализации</label>
+                    <input type="text" id="project_deadline" name="project_deadline" placeholder="Например: 3 месяца">
+                </div>
+
+                <div class="form-group">
+                    <label for="task_type">Тип задачи</label>
+                    <select id="task_type" name="task_type">
+                        <option value="">Выберите тип</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="product_interest">Интересующий продукт</label>
+                    <select id="product_interest" name="product_interest">
+                        <option value="">Выберите продукт</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="preferred_contact_method">Предпочтительный способ связи</label>
+                    <select id="preferred_contact_method" name="preferred_contact_method">
+                        <option value="">Выберите способ</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Телефон</option>
+                        <option value="telegram">Telegram</option>
+                        <option value="whatsapp">WhatsApp</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="convenient_time">Удобное время связи</label>
+                    <input type="text" id="convenient_time" name="convenient_time" placeholder="Например: 10:00-18:00">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="comment">Комментарий</label>
+                    <textarea id="comment" name="comment" rows="3" placeholder="Дополнительная информация"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                <span class="btn-text">Отправить заявку</span>
+                <span class="btn-loader" style="display:none;">Отправка...</span>
+            </button>
+        </form>
+
+        <div id="success-message" class="success-message" style="display:none;">
+            <h2>Заявка отправлена!</h2>
+            <p>Мы свяжемся с вами в ближайшее время.</p>
+        </div>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
