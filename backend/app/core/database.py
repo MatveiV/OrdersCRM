@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import declarative_base
 import os
 
 DATABASE_URL = os.getenv(
@@ -15,7 +15,7 @@ async_session_factory = async_sessionmaker(
     expire_on_commit=False
 )
 
-Base = DeclarativeBase()
+Base = declarative_base()
 
 
 async def get_db() -> AsyncSession:
