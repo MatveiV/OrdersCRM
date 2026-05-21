@@ -63,24 +63,22 @@ services:
     labels:
       - "com.orderscrm.service=nginx"
 
-  # Backend service (uncomment after building)
-  # backend:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   container_name: orderscrm_backend
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     DATABASE_URL: ${DATABASE_URL}
-  #   networks:
-  #     - crm_network
-  #   restart: unless-stopped
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   labels:
-  #     - "com.orderscrm.service=backend"
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orderscrm_backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    networks:
+      - crm_network
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    labels:
+      - "com.orderscrm.service=backend"
 
   registry:
     image: registry:2

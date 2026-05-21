@@ -1,88 +1,69 @@
 -- Orders CRM Database Initialization
 
--- Create leads table for warm clients
+-- Lead table
 CREATE TABLE IF NOT EXISTS leads (
     id SERIAL PRIMARY KEY,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-
-    -- Contact information
-    contact_name VARCHAR(255) NOT NULL,
-    contact_phone VARCHAR(50),
-    contact_email VARCHAR(255),
-
-    -- Business information
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    middle_name VARCHAR(255),
+    contact_data TEXT,
+    business_niche VARCHAR(255),
+    company_size VARCHAR(100),
+    task_volume VARCHAR(255),
+    role VARCHAR(100),
     business_info TEXT,
     budget VARCHAR(100),
-    contact_method VARCHAR(50),
-    comments TEXT,
+    project_deadline VARCHAR(255),
+    task_type VARCHAR(255),
+    product_interest VARCHAR(255),
+    preferred_contact_method VARCHAR(100),
+    convenient_time VARCHAR(100),
+    comment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    -- Lead metrics (aggregated by frontend)
-    lead_metrics JSONB,
-    technical_info JSONB,
-
-    -- UTM parameters
-    source_url TEXT,
+-- Behavior table (1-to-1 with leads)
+CREATE TABLE IF NOT EXISTS behaviors (
+    lead_id INTEGER PRIMARY KEY REFERENCES leads(id) ON DELETE CASCADE,
+    time_spent_seconds FLOAT,
+    buttons_clicked TEXT,
+    cursor_hover_zones TEXT,
+    return_count INTEGER DEFAULT 0,
+    page_views INTEGER DEFAULT 0,
+    scroll_depth_percent FLOAT,
+    device_type VARCHAR(50),
+    browser VARCHAR(100),
+    os VARCHAR(100),
+    screen_resolution VARCHAR(20),
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    referrer VARCHAR(500),
     utm_source VARCHAR(255),
     utm_medium VARCHAR(255),
     utm_campaign VARCHAR(255),
-
-    -- Technical info
-    ip_address INET,
-    user_agent TEXT,
-
-    -- Status
-    status VARCHAR(50) DEFAULT 'new',
-    processed BOOLEAN DEFAULT FALSE
-);
-
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
-CREATE INDEX IF NOT EXISTS idx_leads_contact_email ON leads(contact_email);
-CREATE INDEX IF NOT EXISTS idx_leads_contact_phone ON leads(contact_phone);
-
--- Lead source tracking table
-CREATE TABLE IF NOT EXISTS lead_sources (
-    id SERIAL PRIMARY KEY,
-    source_name VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Insert default sources
-INSERT INTO lead_sources (source_name) VALUES
-    ('website'),
-    ('landing_page'),
-    ('form_direct'),
-    ('referral')
-ON CONFLICT DO NOTHING;
-
--- Create audit log for data changes
-CREATE TABLE IF NOT EXISTS audit_log (
-    id SERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    table_name VARCHAR(100),
-    record_id INTEGER,
-    action VARCHAR(50),
-    old_data JSONB,
-    new_data JSONB,
-    changed_by VARCHAR(255)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Function to update timestamp
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Admin data table
+CREATE TABLE IF NOT EXISTS admin_data (
+    id SERIAL PRIMARY KEY,
+    service_name TEXT,
+    budget_range TEXT,
+    available_products TEXT,
+    contact_methods TEXT,
+    form_settings JSONB,
+    ui_config JSONB,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- Trigger for leads
-CREATE TRIGGER update_leads_timestamp
-    BEFORE UPDATE ON leads
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_last_name ON leads(last_name);
+CREATE INDEX IF NOT EXISTS idx_behaviors_lead_id ON behaviors(lead_id);
 
 -- Grant permissions
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO crm_user;
