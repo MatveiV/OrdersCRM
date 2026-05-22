@@ -371,16 +371,16 @@ body {
     overflow: hidden;
 }
 
-.services-table {
+.data-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.services-table thead {
+.data-table thead {
     background: #F8F9FA;
 }
 
-.services-table th {
+.data-table th {
     padding: 12px 16px;
     text-align: left;
     font-size: 0.8rem;
@@ -391,18 +391,18 @@ body {
     border-bottom: 1px solid var(--dborder);
 }
 
-.services-table td {
+.data-table td {
     padding: 14px 16px;
     font-size: 0.9rem;
     color: var(--dtext);
     border-bottom: 1px solid #F0F0F0;
 }
 
-.services-table tbody tr:hover {
+.data-table tbody tr:hover {
     background: #FAFBFC;
 }
 
-.services-table tbody tr:last-child td {
+.data-table tbody tr:last-child td {
     border-bottom: none;
 }
 
@@ -512,6 +512,57 @@ body {
     animation: slideUp 0.2s ease;
 }
 
+.modal-wide {
+    max-width: 720px;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.detail-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--dborder);
+}
+
+.detail-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.detail-section h3 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--dprimary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 24px;
+}
+
+.detail-grid div {
+    font-size: 0.9rem;
+    color: var(--dtext);
+    line-height: 1.6;
+}
+
+.detail-grid div strong {
+    color: var(--dtext-secondary);
+    font-weight: 600;
+}
+
+.detail-section p {
+    font-size: 0.9rem;
+    color: var(--dtext);
+    line-height: 1.6;
+}
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }

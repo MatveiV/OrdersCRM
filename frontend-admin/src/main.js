@@ -1,6 +1,7 @@
 import './styles/main.css';
 import { authApi } from './api/auth.js';
 import { servicesApi } from './api/services.js';
+import { leadsApi } from './api/leads.js';
 
 const TOKEN_KEY = 'admin_access_token';
 const REFRESH_KEY = 'admin_refresh_token';
@@ -63,8 +64,8 @@ async function render() {
     const route = getRoute();
 
     if (admin) {
-        if (route === '/dashboard') {
-            renderDashboard(admin);
+        if (route.startsWith('/dashboard')) {
+            renderDashboard(admin, route);
         } else {
             navigate('/dashboard');
         }
@@ -265,14 +266,90 @@ function openServiceModal(service = null) {
     });
 }
 
+// ---- Lead Detail Modal ----
+
+function openLeadDetailModal(lead) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    const behavior = lead.behavior || {};
+    const fmtBudget = lead.budget ? `${parseInt(lead.budget).toLocaleString('ru-RU')} ₽` : '—';
+
+    overlay.innerHTML = `
+        <div class="modal-container modal-wide">
+            <div class="modal-header">
+                <h2>Заявка #${lead.id} — ${lead.first_name} ${lead.last_name}</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-section">
+                    <h3>Контактные данные</h3>
+                    <div class="detail-grid">
+                        <div><strong>Имя:</strong> ${lead.first_name} ${lead.middle_name || ''}</div>
+                        <div><strong>Фамилия:</strong> ${lead.last_name}</div>
+                        <div><strong>Контакты:</strong> ${lead.contact_data}</div>
+                        <div><strong>Роль:</strong> ${lead.role || '—'}</div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Информация о проекте</h3>
+                    <div class="detail-grid">
+                        <div><strong>Ниша:</strong> ${lead.business_niche || '—'}</div>
+                        <div><strong>Компания:</strong> ${lead.company_size || '—'}</div>
+                        <div><strong>Тип задачи:</strong> ${lead.task_type || '—'}</div>
+                        <div><strong>Продукт:</strong> ${lead.product_interest || '—'}</div>
+                        <div><strong>Объём задачи:</strong> ${lead.task_volume || '—'}</div>
+                        <div><strong>Бюджет:</strong> ${fmtBudget}</div>
+                        <div><strong>Срок:</strong> ${lead.project_deadline || '—'}</div>
+                        <div><strong>Способ связи:</strong> ${lead.preferred_contact_method || '—'}</div>
+                        <div><strong>Удобное время:</strong> ${lead.convenient_time || '—'}</div>
+                    </div>
+                </div>
+                ${lead.business_info ? `<div class="detail-section"><h3>О бизнесе</h3><p>${lead.business_info}</p></div>` : ''}
+                ${lead.comment ? `<div class="detail-section"><h3>Комментарий</h3><p>${lead.comment}</p></div>` : ''}
+                <div class="detail-section">
+                    <h3>Поведение</h3>
+                    <div class="detail-grid">
+                        <div><strong>Время:</strong> ${behavior.time_spent_seconds ? Math.round(behavior.time_spent_seconds) + 'с' : '—'}</div>
+                        <div><strong>Просмотры:</strong> ${behavior.page_views || '—'}</div>
+                        <div><strong>Возвраты:</strong> ${behavior.return_count || '—'}</div>
+                        <div><strong>Скролл:</strong> ${behavior.scroll_depth_percent ? Math.round(behavior.scroll_depth_percent) + '%' : '—'}</div>
+                        <div><strong>Устройство:</strong> ${behavior.device_type || '—'}</div>
+                        <div><strong>Браузер:</strong> ${behavior.browser || '—'}</div>
+                        <div><strong>ОС:</strong> ${behavior.os || '—'}</div>
+                        <div><strong>IP:</strong> ${behavior.ip_address || '—'}</div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-grid">
+                        <div><strong>Создана:</strong> ${lead.created_at || '—'}</div>
+                        <div><strong>Обновлена:</strong> ${lead.updated_at || '—'}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="modal-close-btn">Закрыть</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    document.getElementById('modal-close').addEventListener('click', close);
+    document.getElementById('modal-close-btn').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+}
+
 // ---- Load & Render Services ----
 
 let currentAdmin = null;
 
 async function loadServices() {
+    const servicesSection = document.getElementById('services-section');
+    if (!servicesSection) return;
     const tableBody = document.getElementById('services-tbody');
-    const emptyState = document.getElementById('empty-state');
-    const errorState = document.getElementById('error-state');
+    const emptyState = servicesSection.querySelector('.empty-state-default');
+    const errorState = servicesSection.querySelector('.error-state');
 
     tableBody.innerHTML = '';
     emptyState.style.display = 'none';
@@ -359,11 +436,97 @@ async function loadServices() {
     }
 }
 
-// ---- Dashboard Render ----
+// ---- Load & Render Leads ----
 
-function renderDashboard(admin) {
+async function loadLeads() {
+    const leadsSection = document.getElementById('leads-section');
+    if (!leadsSection) return;
+    const tableBody = document.getElementById('leads-tbody');
+    const emptyState = leadsSection.querySelector('.empty-state-default');
+    const errorState = leadsSection.querySelector('.error-state');
+
+    tableBody.innerHTML = '';
+    emptyState.style.display = 'none';
+    errorState.style.display = 'none';
+
+    try {
+        const leads = await leadsApi.getAll();
+
+        if (!Array.isArray(leads)) {
+            errorState.style.display = 'block';
+            errorState.querySelector('.error-text').textContent = 'Некорректный формат данных от сервера';
+            return;
+        }
+
+        if (leads.length === 0) {
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        leads.forEach(lead => {
+            const fmtBudget = lead.budget ? `${parseInt(lead.budget).toLocaleString('ru-RU')} ₽` : '—';
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="col-id">${lead.id}</td>
+                <td class="col-name">${lead.first_name} ${lead.last_name}</td>
+                <td class="col-contact">${lead.contact_data || '—'}</td>
+                <td class="col-task">${lead.task_type || '—'}</td>
+                <td class="col-budget">${fmtBudget}</td>
+                <td class="col-status">
+                    <span class="badge badge-active">${lead.created_at ? new Date(lead.created_at).toLocaleDateString('ru-RU') : '—'}</span>
+                </td>
+                <td class="col-actions">
+                    <button class="action-btn view-btn" title="Просмотр" data-id="${lead.id}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button class="action-btn delete-btn" title="Удалить" data-id="${lead.id}" data-name="${lead.first_name} ${lead.last_name}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = parseInt(btn.dataset.id);
+                try {
+                    const lead = await leadsApi.getById(id);
+                    openLeadDetailModal(lead);
+                } catch (err) {
+                    showToast(err.message || 'Ошибка загрузки заявки', 'error');
+                }
+            });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = parseInt(btn.dataset.id);
+                const name = btn.dataset.name;
+                const ok = await showConfirm(`Вы уверены, что хотите удалить заявку "${name}"? Это действие нельзя отменить.`);
+                if (!ok) return;
+                try {
+                    await leadsApi.delete(id);
+                    showToast('Заявка удалена', 'success');
+                    await loadLeads();
+                } catch (err) {
+                    showToast(err.message || 'Ошибка при удалении', 'error');
+                }
+            });
+        });
+    } catch (err) {
+        errorState.style.display = 'block';
+        errorState.querySelector('.error-text').textContent = err.message || 'Не удалось загрузить список заявок';
+    }
+}
+
+// ---- Dashboard Shell ----
+
+function renderDashboard(admin, route) {
     currentAdmin = admin;
+    const isLeads = route === '/dashboard/leads';
     const app = document.getElementById('app');
+
     app.innerHTML = `
         <div class="dashboard">
             <aside class="sidebar">
@@ -371,11 +534,11 @@ function renderDashboard(admin) {
                     <h2 class="sidebar-title">Orders CRM</h2>
                 </div>
                 <nav class="sidebar-nav">
-                    <a class="nav-item active" href="#/dashboard">
+                    <a class="nav-item ${!isLeads ? 'active' : ''}" href="#/dashboard">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                         <span>Услуги</span>
                     </a>
-                    <a class="nav-item disabled" href="#">
+                    <a class="nav-item ${isLeads ? 'active' : ''}" href="#/dashboard/leads">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                         <span>Заявки</span>
                     </a>
@@ -386,40 +549,8 @@ function renderDashboard(admin) {
                 </div>
             </aside>
             <main class="main-content">
-                <header class="content-header">
-                    <h1 class="page-title">Управление услугами</h1>
-                    <button id="add-service-btn" class="btn btn-primary">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Добавить услугу
-                    </button>
-                </header>
-
                 <div id="toast-container" class="toast-container"></div>
-
-                <div class="table-container">
-                    <div id="error-state" class="empty-state" style="display:none;">
-                        <p class="error-text"></p>
-                        <button class="btn btn-secondary" id="retry-btn">Повторить</button>
-                    </div>
-                    <div id="empty-state" class="empty-state" style="display:none;">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                        <p>Нет услуг. Нажмите «Добавить услугу», чтобы создать первую.</p>
-                    </div>
-                    <table class="services-table" id="services-table">
-                        <thead>
-                            <tr>
-                                <th class="col-id">ID</th>
-                                <th class="col-name">Название услуги</th>
-                                <th class="col-type">Тип задачи</th>
-                                <th class="col-budget">Диапазон бюджета</th>
-                                <th class="col-product">Продукт</th>
-                                <th class="col-status">Статус</th>
-                                <th class="col-actions">Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody id="services-tbody"></tbody>
-                    </table>
-                </div>
+                <div id="dashboard-view"></div>
             </main>
         </div>
     `;
@@ -430,16 +561,95 @@ function renderDashboard(admin) {
         render();
     });
 
+    if (isLeads) {
+        renderLeadsView();
+    } else {
+        renderServicesView();
+    }
+}
+
+function renderServicesView() {
+    const view = document.getElementById('dashboard-view');
+    view.innerHTML = `
+        <header class="content-header">
+            <h1 class="page-title">Управление услугами</h1>
+            <button id="add-service-btn" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Добавить услугу
+            </button>
+        </header>
+        <div class="table-container" id="services-section">
+            <div class="error-state" style="display:none;">
+                <p class="error-text"></p>
+                <button class="btn btn-secondary retry-btn">Повторить</button>
+            </div>
+            <div class="empty-state-default" style="display:none;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                <p>Нет услуг. Нажмите «Добавить услугу», чтобы создать первую.</p>
+            </div>
+            <table class="data-table" id="services-table">
+                <thead>
+                    <tr>
+                        <th class="col-id">ID</th>
+                        <th class="col-name">Название услуги</th>
+                        <th class="col-type">Тип задачи</th>
+                        <th class="col-budget">Диапазон бюджета</th>
+                        <th class="col-product">Продукт</th>
+                        <th class="col-status">Статус</th>
+                        <th class="col-actions">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="services-tbody"></tbody>
+            </table>
+        </div>
+    `;
+
     document.getElementById('add-service-btn').addEventListener('click', () => {
         openServiceModal(null);
     });
 
-    const retryBtn = document.getElementById('retry-btn');
-    if (retryBtn) {
-        retryBtn.addEventListener('click', loadServices);
-    }
+    const retryBtn = view.querySelector('.retry-btn');
+    if (retryBtn) retryBtn.addEventListener('click', loadServices);
 
     loadServices();
+}
+
+function renderLeadsView() {
+    const view = document.getElementById('dashboard-view');
+    view.innerHTML = `
+        <header class="content-header">
+            <h1 class="page-title">Заявки клиентов</h1>
+        </header>
+        <div class="table-container" id="leads-section">
+            <div class="error-state" style="display:none;">
+                <p class="error-text"></p>
+                <button class="btn btn-secondary retry-btn">Повторить</button>
+            </div>
+            <div class="empty-state-default" style="display:none;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <p>Нет заявок.</p>
+            </div>
+            <table class="data-table" id="leads-table">
+                <thead>
+                    <tr>
+                        <th class="col-id">ID</th>
+                        <th class="col-name">Клиент</th>
+                        <th class="col-contact">Контакты</th>
+                        <th class="col-task">Тип задачи</th>
+                        <th class="col-budget">Бюджет</th>
+                        <th class="col-status">Дата</th>
+                        <th class="col-actions">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="leads-tbody"></tbody>
+            </table>
+        </div>
+    `;
+
+    const retryBtn = view.querySelector('.retry-btn');
+    if (retryBtn) retryBtn.addEventListener('click', loadLeads);
+
+    loadLeads();
 }
 
 // ---- Login Pages (unchanged from before) ----
