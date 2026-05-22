@@ -7,29 +7,25 @@
 C4Context
     title Orders CRM — System Context Diagram
 
-    Person(customer, "Клиент", "Посетитель лендинга, заполняет форму заявки")
-    Person(admin, "Администратор", "Управляет лидами, настройками, БД через pgAdmin")
-    Person(devops, "DevOps инженер", "Управляет деплоем, образами, SSL")
+    Person(customer, "Клиент", "Посетитель лендинга, заполняет форму заявки, поведенческие метрики")
+    Person(admin, "Администратор", "Управляет заявками, услугами, через JWT-авторизацию")
 
-    System_Boundary(orderscrm, "Orders CRM System") {
-        System(nginx, "Nginx", "Reverse proxy, SSL termination, статика")
-        System(frontend_client, "Client Frontend", "Лендинг: Hero, проекты, форма заявки")
-        System(frontend_admin, "Admin Frontend", "Админ-панель: форма заявки")
-        System(backend, "Backend API", "FastAPI: CRUD лидов, поведений, настроек")
-        SystemDb(postgres, "PostgreSQL", "crm_db: leads, behaviors, admin_data")
-        System_Ext(pgadmin, "pgAdmin", "Веб-интерфейс управления БД")
-        System_Ext(registry, "Docker Registry", "Локальный реестр образов")
+    System_Boundary(orderscrm, "Orders CRM System (Docker)") {
+        System(nginx, "Nginx", "Reverse proxy, SSL termination, статика, rate-limit")
+        System(frontend_client, "Client Frontend", "Лендинг: Hero, проекты, форма + трекинг")
+        System(frontend_admin, "Admin Frontend", "SPA: авторизация, услуги, заявки, статистика")
+        System(backend, "Backend API", "FastAPI: CRUD, JWT, скоринг, метрики")
+        SystemDb(postgres, "PostgreSQL", "crm_db: 7 таблиц")
+        System_Ext(watchtower, "Watchtower", "Авто-обновление образов")
     }
 
-    Rel(customer, nginx, "HTTPS: просматривает лендинг, отправляет заявку")
-    Rel(admin, pgadmin, "HTTPS:5050: управляет БД")
-    Rel(admin, frontend_admin, "HTTPS: /admin: просматривает заявки")
-    Rel(devops, registry, "HTTPS:8080: пушит/пуллит образы")
+    Rel(customer, nginx, "HTTPS: просматривает лендинг, отправляет заявку, трекинг")
+    Rel(admin, nginx, "HTTPS: /admin: авторизация, управление")
     Rel(nginx, frontend_client, "Раздаёт статику /")
     Rel(nginx, frontend_admin, "Раздаёт статику /admin")
-    Rel(nginx, backend, "Проксирует /api/*, /docs, /health")
-    Rel(backend, postgres, "SQL: asyncpg, CRUD операции")
-    Rel(pgadmin, postgres, "SQL: управление БД")
+    Rel(nginx, backend, "Проксирует /api/*, /health; блокирует /docs")
+    Rel(backend, postgres, "SQL: asyncpg, 7 моделей")
+    Rel(backend, nginx, "JWT-токены через заголовки")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
@@ -38,18 +34,16 @@ C4Context
 
 | Актор | Роль | Взаимодействие |
 |-------|------|----------------|
-| Клиент | Посетитель | Заполняет форму на лендинге, отправляет заявку |
-| Администратор | Управление | Просматривает заявки через /admin, управляет БД через pgAdmin |
-| DevOps | Инфраструктура | Деплой, SSL, Docker Registry |
+| Клиент | Посетитель | Заполняет форму, отправляет метрики поведения |
+| Администратор | Управление | JWT-авторизация, CRUD услуг, просмотр заявок и статистики |
 
 ## Описание систем
 
 | Система | Технология | Назначение |
 |---------|------------|------------|
-| Nginx | nginx:alpine | Reverse proxy, SSL, раздача статики |
-| Client Frontend | Vite + Vanilla JS | Лендинг с формой заявки |
-| Admin Frontend | Vite + Vanilla JS | Админ-панель |
-| Backend API | FastAPI + SQLAlchemy | REST API для лидов и поведений |
-| PostgreSQL | postgres:16-alpine | Хранение данных |
-| pgAdmin | dpage/pgadmin4 | Управление БД |
-| Docker Registry | registry:2 | Локальный реестр образов |
+| Nginx | nginx:alpine | Reverse proxy, SSL, статика, rate-limit (10r/s) |
+| Client Frontend | Vite + Vanilla JS | Лендинг + трекинг поведения (behavior-metrics.js) |
+| Admin Frontend | Vite + Vanilla JS | SPA: 4 вкладки (услуги, лиды, CRM, статистика) |
+| Backend API | FastAPI + SQLAlchemy | REST API, скоринг, JWT, агрегация метрик |
+| PostgreSQL | postgres:16-alpine | 7 таблиц: leads, behaviors, admin_users, admin_data, admin_settings, applications, behavior_metrics |
+| Watchtower | containrrr/watchtower | Автоматическое обновление Docker-образов |

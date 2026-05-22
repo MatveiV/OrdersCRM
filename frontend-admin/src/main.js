@@ -2,6 +2,8 @@ import './styles/main.css';
 import { authApi } from './api/auth.js';
 import { servicesApi } from './api/services.js';
 import { leadsApi } from './api/leads.js';
+import { renderStatsView } from './components/StatsModal.js';
+import { renderApplicationsPage } from './pages/ApplicationsPage.js';
 
 const TOKEN_KEY = 'admin_access_token';
 const REFRESH_KEY = 'admin_refresh_token';
@@ -274,6 +276,12 @@ function openLeadDetailModal(lead) {
 
     const behavior = lead.behavior || {};
     const fmtBudget = lead.budget ? `${parseInt(lead.budget).toLocaleString('ru-RU')} ₽` : '—';
+    const fmtEst = lead.estimated_cost ? `${parseInt(lead.estimated_cost).toLocaleString('ru-RU')} ₽` : '—';
+    const fmtActual = lead.actual_cost ? `${parseInt(lead.actual_cost).toLocaleString('ru-RU')} ₽` : '—';
+
+    const priorityLabels = { low: 'Низкий', medium: 'Средний', high: 'Высокий', urgent: 'Критичный' };
+    const statusLabels = { new: 'Новая', in_progress: 'В работе', completed: 'Завершена', cancelled: 'Отменена' };
+    const paymentLabels = { unpaid: 'Не оплачено', partial: 'Частично', paid: 'Оплачено' };
 
     overlay.innerHTML = `
         <div class="modal-container modal-wide">
@@ -305,6 +313,29 @@ function openLeadDetailModal(lead) {
                         <div><strong>Удобное время:</strong> ${lead.convenient_time || '—'}</div>
                     </div>
                 </div>
+                <div class="detail-section">
+                    <h3>Приоритет и статус</h3>
+                    <div class="detail-grid">
+                        <div><strong>Приоритет:</strong> <span class="badge badge-${lead.priority || 'medium'}">${priorityLabels[lead.priority] || lead.priority || '—'}</span></div>
+                        <div><strong>Статус:</strong> <span class="badge badge-${lead.status === 'new' ? 'active' : lead.status === 'in_progress' ? 'warning' : lead.status === 'completed' ? 'success' : 'inactive'}">${statusLabels[lead.status] || lead.status || '—'}</span></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Планирование</h3>
+                    <div class="detail-grid">
+                        <div><strong>Начало:</strong> ${lead.planned_start_date || '—'}</div>
+                        <div><strong>Окончание:</strong> ${lead.planned_end_date || '—'}</div>
+                        <div><strong>Ответственный:</strong> ${lead.assigned_to || '—'}</div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Экономика</h3>
+                    <div class="detail-grid">
+                        <div><strong>Оценка:</strong> ${fmtEst}</div>
+                        <div><strong>Факт:</strong> ${fmtActual}</div>
+                        <div><strong>Оплата:</strong> <span class="badge badge-${lead.payment_status === 'paid' ? 'success' : lead.payment_status === 'partial' ? 'warning' : 'inactive'}">${paymentLabels[lead.payment_status] || lead.payment_status || '—'}</span></div>
+                    </div>
+                </div>
                 ${lead.business_info ? `<div class="detail-section"><h3>О бизнесе</h3><p>${lead.business_info}</p></div>` : ''}
                 ${lead.comment ? `<div class="detail-section"><h3>Комментарий</h3><p>${lead.comment}</p></div>` : ''}
                 <div class="detail-section">
@@ -329,6 +360,7 @@ function openLeadDetailModal(lead) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" id="modal-close-btn">Закрыть</button>
+                <button type="button" class="btn btn-primary" id="modal-edit-lead-btn">Редактировать</button>
             </div>
         </div>
     `;
@@ -337,7 +369,108 @@ function openLeadDetailModal(lead) {
     const close = () => overlay.remove();
     document.getElementById('modal-close').addEventListener('click', close);
     document.getElementById('modal-close-btn').addEventListener('click', close);
+    document.getElementById('modal-edit-lead-btn').addEventListener('click', () => {
+        close();
+        openLeadEditModal(lead);
+    });
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+}
+
+function openLeadEditModal(lead) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    const priorityOptions = ['low', 'medium', 'high', 'urgent'].map(p =>
+        `<option value="${p}" ${lead.priority === p ? 'selected' : ''}>${{ low: 'Низкий', medium: 'Средний', high: 'Высокий', urgent: 'Критичный' }[p]}</option>`
+    ).join('');
+    const statusOptions = ['new', 'in_progress', 'completed', 'cancelled'].map(s =>
+        `<option value="${s}" ${lead.status === s ? 'selected' : ''}>${{ new: 'Новая', in_progress: 'В работе', completed: 'Завершена', cancelled: 'Отменена' }[s]}</option>`
+    ).join('');
+    const paymentOptions = ['unpaid', 'partial', 'paid'].map(p =>
+        `<option value="${p}" ${lead.payment_status === p ? 'selected' : ''}>${{ unpaid: 'Не оплачено', partial: 'Частично', paid: 'Оплачено' }[p]}</option>`
+    ).join('');
+
+    overlay.innerHTML = `
+        <div class="modal-container modal-wide">
+            <div class="modal-header">
+                <h2>Редактирование заявки #${lead.id}</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <form id="lead-edit-form" class="modal-form">
+                <div class="form-row form-row-3">
+                    <div class="form-group">
+                        <label for="lead-priority">Приоритет</label>
+                        <select id="lead-priority">${priorityOptions}</select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-status">Статус</label>
+                        <select id="lead-status">${statusOptions}</select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-payment">Оплата</label>
+                        <select id="lead-payment">${paymentOptions}</select>
+                    </div>
+                </div>
+                <div class="form-row form-row-3">
+                    <div class="form-group">
+                        <label for="lead-start">Начало (план)</label>
+                        <input type="date" id="lead-start" value="${lead.planned_start_date || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-end">Окончание (план)</label>
+                        <input type="date" id="lead-end" value="${lead.planned_end_date || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-assigned">Ответственный</label>
+                        <input type="text" id="lead-assigned" placeholder="ФИО" value="${lead.assigned_to || ''}">
+                    </div>
+                </div>
+                <div class="form-row form-row-3">
+                    <div class="form-group">
+                        <label for="lead-est-cost">Оценка (₽)</label>
+                        <input type="number" id="lead-est-cost" min="0" step="1000" placeholder="0" value="${lead.estimated_cost || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-act-cost">Факт (₽)</label>
+                        <input type="number" id="lead-act-cost" min="0" step="1000" placeholder="0" value="${lead.actual_cost || ''}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="modal-cancel">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    document.getElementById('modal-close').addEventListener('click', close);
+    document.getElementById('modal-cancel').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    document.getElementById('lead-edit-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            priority: document.getElementById('lead-priority').value,
+            status: document.getElementById('lead-status').value,
+            payment_status: document.getElementById('lead-payment').value,
+            planned_start_date: document.getElementById('lead-start').value || null,
+            planned_end_date: document.getElementById('lead-end').value || null,
+            assigned_to: document.getElementById('lead-assigned').value.trim() || null,
+            estimated_cost: parseInt(document.getElementById('lead-est-cost').value) || null,
+            actual_cost: parseInt(document.getElementById('lead-act-cost').value) || null,
+        };
+        try {
+            await leadsApi.update(lead.id, payload);
+            showToast('Заявка обновлена', 'success');
+            close();
+            await loadLeads();
+        } catch (err) {
+            showToast(err.message || 'Ошибка при обновлении', 'error');
+        }
+    });
 }
 
 // ---- Load & Render Services ----
@@ -463,6 +596,9 @@ async function loadLeads() {
             return;
         }
 
+        const priorityLabels = { low: 'Низкий', medium: 'Средний', high: 'Высокий', urgent: 'Критичный' };
+        const statusLabels = { new: 'Новая', in_progress: 'В работе', completed: 'Завершена', cancelled: 'Отменена' };
+
         leads.forEach(lead => {
             const fmtBudget = lead.budget ? `${parseInt(lead.budget).toLocaleString('ru-RU')} ₽` : '—';
             const row = document.createElement('tr');
@@ -472,8 +608,14 @@ async function loadLeads() {
                 <td class="col-contact">${lead.contact_data || '—'}</td>
                 <td class="col-task">${lead.task_type || '—'}</td>
                 <td class="col-budget">${fmtBudget}</td>
+                <td class="col-priority">
+                    <span class="badge badge-${lead.priority || 'medium'}">${priorityLabels[lead.priority] || lead.priority || '—'}</span>
+                </td>
                 <td class="col-status">
-                    <span class="badge badge-active">${lead.created_at ? new Date(lead.created_at).toLocaleDateString('ru-RU') : '—'}</span>
+                    <span class="badge badge-${lead.status === 'new' ? 'active' : lead.status === 'in_progress' ? 'warning' : lead.status === 'completed' ? 'success' : 'inactive'}">${statusLabels[lead.status] || lead.status || '—'}</span>
+                </td>
+                <td class="col-date">
+                    ${lead.created_at ? new Date(lead.created_at).toLocaleDateString('ru-RU') : '—'}
                 </td>
                 <td class="col-actions">
                     <button class="action-btn view-btn" title="Просмотр" data-id="${lead.id}">
@@ -524,7 +666,10 @@ async function loadLeads() {
 
 function renderDashboard(admin, route) {
     currentAdmin = admin;
+    const isApps = route === '/dashboard/apps';
+    const isStats = route === '/dashboard/stats';
     const isLeads = route === '/dashboard/leads';
+    const isServices = !isApps && !isStats && !isLeads;
     const app = document.getElementById('app');
 
     app.innerHTML = `
@@ -534,13 +679,21 @@ function renderDashboard(admin, route) {
                     <h2 class="sidebar-title">Orders CRM</h2>
                 </div>
                 <nav class="sidebar-nav">
-                    <a class="nav-item ${!isLeads ? 'active' : ''}" href="#/dashboard">
+                    <a class="nav-item ${isServices ? 'active' : ''}" href="#/dashboard">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                         <span>Услуги</span>
                     </a>
                     <a class="nav-item ${isLeads ? 'active' : ''}" href="#/dashboard/leads">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                        <span>Заявки</span>
+                        <span>Заявки (лиды)</span>
+                    </a>
+                    <a class="nav-item ${isApps ? 'active' : ''}" href="#/dashboard/apps">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 14l2 2 4-4"/></svg>
+                        <span>Заявки (CRM)</span>
+                    </a>
+                    <a class="nav-item ${isStats ? 'active' : ''}" href="#/dashboard/stats">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                        <span>Статистика</span>
                     </a>
                 </nav>
                 <div class="sidebar-footer">
@@ -561,7 +714,11 @@ function renderDashboard(admin, route) {
         render();
     });
 
-    if (isLeads) {
+    if (isApps) {
+        renderApplicationsPage(document.getElementById('dashboard-view'));
+    } else if (isStats) {
+        renderStatsView(document.getElementById('dashboard-view'));
+    } else if (isLeads) {
         renderLeadsView();
     } else {
         renderServicesView();
@@ -637,7 +794,9 @@ function renderLeadsView() {
                         <th class="col-contact">Контакты</th>
                         <th class="col-task">Тип задачи</th>
                         <th class="col-budget">Бюджет</th>
-                        <th class="col-status">Дата</th>
+                        <th class="col-priority">Приоритет</th>
+                        <th class="col-status">Статус</th>
+                        <th class="col-date">Дата</th>
                         <th class="col-actions">Действия</th>
                     </tr>
                 </thead>

@@ -1,6 +1,6 @@
 import { initAnimatedBackground } from './components/AnimatedBackground.js';
 import { renderProjects, initProjectFilters } from './components/ProjectsShowcase.js';
-import { getAdminData, submitLead } from './api/index.js';
+import { getPublicServices, submitLead } from './api/index.js';
 import { BehaviorTracker } from './tracking/behavior.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -9,48 +9,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     initProjectFilters();
     
     const tracker = new BehaviorTracker();
-    const adminData = await getAdminData();
-    populateDynamicFields(adminData);
+    const services = await getPublicServices();
+    populateDynamicFields(services);
     initForm(tracker);
     initScrollAnimations();
 });
 
-function populateDynamicFields(adminData) {
+function populateDynamicFields(services) {
     const taskTypeSelect = document.getElementById('task_type');
     const productInterestSelect = document.getElementById('product_interest');
     const budgetSlider = document.getElementById('budget');
-    
-    if (adminData.service_name) {
-        adminData.service_name.split(',').map(s => s.trim()).forEach(service => {
-            const option = document.createElement('option');
-            option.value = service;
-            option.textContent = service;
-            taskTypeSelect.appendChild(option);
-        });
-    }
-    
-    if (adminData.available_products) {
-        adminData.available_products.split(',').map(p => p.trim()).forEach(product => {
-            const option = document.createElement('option');
-            option.value = product;
-            option.textContent = product;
-            productInterestSelect.appendChild(option);
-        });
-    }
-    
-    if (adminData.budget_range) {
-        try {
-            const range = typeof adminData.budget_range === 'string' ? JSON.parse(adminData.budget_range) : adminData.budget_range;
-            if (range.min && range.max) {
-                budgetSlider.min = range.min;
-                budgetSlider.max = range.max;
-                budgetSlider.value = Math.round((range.min + range.max) / 2);
-                document.querySelector('.budget-labels').children[0].textContent = `${parseInt(range.min).toLocaleString('ru-RU')} ₽`;
-                document.querySelector('.budget-labels').children[1].textContent = `${parseInt(range.max).toLocaleString('ru-RU')} ₽`;
-                document.getElementById('budget-value').textContent = `${parseInt(budgetSlider.value).toLocaleString('ru-RU')} ₽`;
-            }
-        } catch (e) {
-            console.warn('Failed to parse budget range:', e);
+
+    taskTypeSelect.innerHTML = '<option value="">Выберите тип</option>';
+    productInterestSelect.innerHTML = '<option value="">Выберите продукт</option>';
+
+    if (!Array.isArray(services) || services.length === 0) return;
+
+    const uniqueTypes = [...new Set(services.map(s => s.task_type).filter(Boolean))];
+    uniqueTypes.forEach(type => {
+        const opt = document.createElement('option');
+        opt.value = type;
+        opt.textContent = type;
+        taskTypeSelect.appendChild(opt);
+    });
+
+    const uniqueProducts = [...new Set(services.map(s => s.product_interest).filter(Boolean))];
+    uniqueProducts.forEach(product => {
+        const opt = document.createElement('option');
+        opt.value = product;
+        opt.textContent = product;
+        productInterestSelect.appendChild(opt);
+    });
+
+    const budgets = services.map(s => {
+        try { return s.budget_range ? JSON.parse(s.budget_range) : null; }
+        catch { return null; }
+    }).filter(Boolean);
+    if (budgets.length > 0) {
+        const min = Math.min(...budgets.map(b => b.min).filter(Boolean));
+        const max = Math.max(...budgets.map(b => b.max).filter(Boolean));
+        if (min && max && max > min) {
+            budgetSlider.min = min;
+            budgetSlider.max = max;
+            budgetSlider.value = Math.round((min + max) / 2);
+            document.querySelector('.budget-labels').children[0].textContent = `${parseInt(min).toLocaleString('ru-RU')} ₽`;
+            document.querySelector('.budget-labels').children[1].textContent = `${parseInt(max).toLocaleString('ru-RU')} ₽`;
+            document.getElementById('budget-value').textContent = `${parseInt(budgetSlider.value).toLocaleString('ru-RU')} ₽`;
         }
     }
 }

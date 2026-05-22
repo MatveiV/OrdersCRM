@@ -1,0 +1,478 @@
+Промпт для ИИ-агента на финальную настройку безопасности и продакшен-конфигурации Orders CRM:
+
+**Задача:** Финализировать настройку приложения: закрыть прямое подключение к API и базе данных, настроить единую точку входа через Nginx на порт 443 (HTTPS), отключить инструменты дебаггинга (pgAdmin, registry), пересобрать контейнеры и проверить, что всё работает только через фронтенд.
+
+
+## Часть 1. Анализ текущей конфигурации
+
+### 1.1. Что нужно проверить перед началом
+
+Изучить текущие файлы конфигурации в проекте:
+- `docker-compose.yml` — порты, сервисы, сети
+- `nginx/nginx.conf` или `nginx/default.conf` — конфигурация Nginx
+- `backend/.env` или `docker-compose.yml` (environment) — переменные окружения бэкенда
+- `frontend-client/` и `frontend-admin/` — конфигурация сборки (Vite/Webpack)
+
+### 1.2. Текущая архитектура (предположительно)
+
+```
+Интернет → Порт 443 (HTTPS) → Nginx → Frontend (статический)
+                                     → Backend (FastAPI) :8000 (прокси)
+                                              → PostgreSQL :5432
+                                     → pgAdmin :5050 (нужно отключить)
+```
+
+---
+
+## Часть 2. Docker Compose — изменения
+
+**Файл:** `docker-compose.yml`
+
+### 2.1. Сервис backend
+
+**Убрать/изменить:**
+```yaml
+# Было (пример):
+ports:
+  - "8000:8000"    # ❌ Убрать! Прямой доступ к API извне
+
+# Стало:
+expose:
+  - "8000"         # ✅ Только внутри Docker-сети, не наружу
+# ports вообще убрать или закомментировать
+```
+
+**Добавить/проверить:**
+```yaml
+networks:
+  - internal        # Внутренняя сеть (backend, db, nginx)
+```
+
+### 2.2. Сервис PostgreSQL
+
+**Убрать/изменить:**
+```yaml
+# Было (пример):
+ports:
+  - "5432:5432"    # ❌ Убрать! Прямой доступ к БД извне
+
+# Стало:
+expose:
+  - "5432"         # ✅ Только внутри Docker-сети
+# ports вообще убрать или закомментировать
+```
+
+### 2.3. Сервис pgAdmin
+
+**Полностью отключить/закомментировать или удалить:**
+
+```yaml
+# pgadmin:
+#   image: dpage/pgadmin4
+#   ...
+#   ❌ Весь сервис удалить или закомментировать
+```
+
+Если pgAdmin нужен только для разработки — убрать из продакшен-конфигурации. Если нужен периодически — оставить закомментированным с пометкой `# DEV ONLY`.
+
+### 2.4. Сервис registry (если есть)
+
+```yaml
+# registry:
+#   image: registry:2
+#   ...
+#   ❌ Удалить или закомментировать
+```
+
+### 2.5. Сервис Watchtower (если есть)
+
+**Оставить, но проверить что он только во внутренней сети:**
+```yaml
+watchtower:
+  image: containrrr/watchtower
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  networks:
+    - internal
+  # Без открытых портов наружу
+```
+
+### 2.6. Сервис Nginx
+
+**Это единственный сервис с открытым портом:**
+```yaml
+nginx:
+  image: nginx:alpine
+  ports:
+    - "443:443"     # ✅ Единственная точка входа
+    - "80:80"       # Опционально: редирект 80 → 443
+  networks:
+    - internal
+  volumes:
+    - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    - ./frontend-client/dist:/usr/share/nginx/html/client:ro
+    - ./frontend-admin/dist:/usr/share/nginx/html/admin:ro
+    - ./ssl:/etc/nginx/ssl:ro   # SSL-сертификаты
+  depends_on:
+    - backend
+```
+
+### 2.7. Сети
+
+```yaml
+networks:
+  internal:
+    driver: bridge
+    internal: false   # false = имеет доступ к интернету (для API-запросов)
+                      # true = полностью изолирована (если не нужен интернет)
+```
+
+---
+
+## Часть 3. Nginx — конфигурация единой точки входа
+
+**Файл:** `nginx/nginx.conf` или `nginx/default.conf`
+
+### 3.1. Полная конфигурация
+
+```nginx
+# Редирект HTTP → HTTPS
+server {
+    listen 80;
+    server_name ваш-домен.ru;
+    return 301 https://$host$request_uri;
+}
+
+# Основной сервер HTTPS
+server {
+    listen 443 ssl http2;
+    server_name ваш-домен.ru;
+
+    # SSL-сертификаты
+    ssl_certificate     /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    # Клиентская страница (основной сайт)
+    location / {
+        root   /usr/share/nginx/html/client;
+        index  index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Админ-панель
+    location /admin {
+        alias  /usr/share/nginx/html/admin;
+        index  index.html;
+        try_files $uri $uri/ /admin/index.html;
+    }
+
+    # Проксирование API-запросов к бэкенду
+    location /api/ {
+        proxy_pass http://backend:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Таймауты
+        proxy_connect_timeout 60s;
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+
+    # Запрет прямого доступа к эндпоинтам бэкенда (не через /api/)
+    location ~ ^/(docs|openapi.json|redoc|admin/settings) {
+        return 403;
+    }
+
+    # Безопасность: скрыть версию Nginx
+    server_tokens off;
+
+    # Защита от clickjacking
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+}
+```
+
+### 3.2. Важные моменты Nginx
+
+- **`location /api/`** — все запросы к API проксируются на `http://backend:8000` (внутренний Docker DNS)
+- **Прямые запросы к бэкенду извне невозможны** (порт 8000 не открыт)
+- **Прямые запросы к БД извне невозможны** (порт 5432 не открыт)
+- **Swagger UI (`/docs`, `/openapi.json`) закрыт** — возвращает 403
+- **pgAdmin отключён полностью**
+
+---
+
+## Часть 4. Backend — дополнительные настройки безопасности
+
+**Файл:** `backend/.env` или environment в `docker-compose.yml`
+
+### 4.1. Переменные окружения
+
+```env
+# Разрешить запросы только с определённых хостов
+ALLOWED_HOSTS=localhost,127.0.0.1,ваш-домен.ru
+
+# CORS: разрешить только свой фронтенд
+CORS_ORIGINS=https://ваш-домен.ru
+
+# Отключить автоматическую документацию в продакшене
+DISABLE_DOCS=true
+
+# JWT секрет (сложный, рандомный)
+JWT_SECRET_KEY=сгенерировать-новый-сложный-ключ-минимум-32-символа
+
+# Режим продакшена
+ENVIRONMENT=production
+DEBUG=false
+```
+
+### 4.2. FastAPI — отключение документации
+
+**Файл:** `backend/main.py`
+
+```python
+import os
+from fastapi import FastAPI
+
+# Отключаем docs и redoc в продакшене
+disable_docs = os.getenv("DISABLE_DOCS", "false").lower() == "true"
+
+app = FastAPI(
+    title="Orders CRM API",
+    docs_url=None if disable_docs else "/docs",
+    redoc_url=None if disable_docs else "/redoc",
+    openapi_url=None if disable_docs else "/openapi.json",
+)
+```
+
+### 4.3. Middleware CORS (уточнить)
+
+**Файл:** `backend/main.py`
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("CORS_ORIGINS", "https://ваш-домен.ru")],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+```
+
+---
+
+## Часть 5. Фронтенд — проверка путей API
+
+**Файлы:** `frontend-client/src/api/` и `frontend-admin/src/api/`
+
+### 5.1. Базовый URL API
+
+**Важно:** все запросы к API должны идти через **относительные пути** (без указания домена и порта), так как Nginx проксирует `/api/`:
+
+```javascript
+// ✅ Правильно (относительный путь)
+const API_BASE = '/api';
+
+// ❌ Неправильно (прямое подключение к порту)
+const API_BASE = 'http://localhost:8000';
+```
+
+Проверить и исправить во всех файлах `api/*.js`:
+- `frontend-client/src/api/`
+- `frontend-admin/src/api/`
+
+**Пример запроса:**
+```javascript
+// Было
+fetch('http://localhost:8000/api/applications/')
+
+// Стало
+fetch('/api/applications/')
+```
+
+### 5.2. Пересборка фронтенда
+
+После изменения путей API — пересобрать:
+```bash
+cd frontend-client && npm run build
+cd frontend-admin && npm run build
+```
+
+---
+
+## Часть 6. SSL-сертификаты
+
+**Файлы в `ssl/` (создать или проверить):**
+
+```
+ssl/
+├── fullchain.pem    # Полный сертификат
+└── privkey.pem      # Приватный ключ
+```
+
+**Для тестового окружения** можно сгенерировать самоподписанный сертификат:
+```bash
+mkdir -p ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout ssl/privkey.pem \
+  -out ssl/fullchain.pem \
+  -subj "/CN=localhost"
+```
+
+**Для продакшена** — использовать Let's Encrypt (certbot) или коммерческий сертификат.
+
+---
+
+## Часть 7. Пересборка и запуск
+
+### 7.1. Остановка старых контейнеров
+
+```bash
+docker compose down
+```
+
+### 7.2. Пересборка образов
+
+```bash
+docker compose build --no-cache
+```
+
+### 7.3. Запуск в продакшен-режиме
+
+```bash
+docker compose up -d
+```
+
+### 7.4. Проверка логов
+
+```bash
+docker compose logs -f nginx
+docker compose logs -f backend
+```
+
+---
+
+## Часть 8. Проверка безопасности
+
+### 8.1. Что должно работать
+
+| Действие | Ожидаемый результат |
+|----------|---------------------|
+| Открыть `https://ваш-домен.ru/` | Клиентская страница (форма заявки) |
+| Открыть `https://ваш-домен.ru/admin` | Админ-панель (перенаправляет на логин) |
+| Заполнить форму на сайте → отправить | Заявка создаётся через `/api/applications` |
+| Войти в админ-панель → управление услугами | CRUD работает через `/api/admin/services` |
+| Войти в админ-панель → заявки | Список заявок со скорингом |
+| Войти в админ-панель → статистика | Heatmap и метрики |
+
+### 8.2. Что НЕ должно работать
+
+| Действие | Ожидаемый результат |
+|----------|---------------------|
+| `http://ваш-домен:8000/docs` | **Недоступно** (порт закрыт) |
+| `http://ваш-домен:8000/api/...` | **Недоступно** (порт закрыт) |
+| `http://ваш-домен:5432` | **Недоступно** (порт закрыт) |
+| `http://ваш-домен:5050` (pgAdmin) | **Недоступно** (сервис отключён) |
+| `https://ваш-домен.ru/docs` | **403 Forbidden** (закрыто Nginx) |
+| `https://ваш-домен.ru/openapi.json` | **403 Forbidden** (закрыто Nginx) |
+| Прямой запрос к API через curl/postman на порт 8000 | **Connection refused** |
+
+### 8.3. Проверочные команды
+
+```bash
+# Проверка: прямой доступ к бэкенду → должен отказать
+curl http://localhost:8000/api/applications/
+# Ожидание: Connection refused
+
+# Проверка: доступ через Nginx → должен работать
+curl https://localhost/api/applications/ -k
+# Ожидание: 200 OK или 401 Unauthorized
+
+# Проверка: документация → должна быть закрыта
+curl https://localhost/docs -k
+# Ожидание: 403 Forbidden
+
+# Проверка: клиентская страница
+curl https://localhost/ -k
+# Ожидание: HTML-код страницы
+```
+
+---
+
+## Часть 9. Финальная проверка работоспособности
+
+### 9.1. Чек-лист функциональности
+
+- [ ] Клиентская страница открывается по HTTPS
+- [ ] Форма заявки отправляет данные (видны в админ-панели)
+- [ ] Метрики поведения собираются (видны в статистике)
+- [ ] Админ-панель открывается, работает авторизация (JWT)
+- [ ] CRUD услуг работает через админ-панель
+- [ ] Список заявок отображается с интеллектуальным скорингом
+- [ ] Heatmap и статистика отображаются
+- [ ] Прямой доступ к портам 8000, 5432, 5050 закрыт
+- [ ] Swagger-документация недоступна извне
+- [ ] Все запросы идут через Nginx на порт 443
+
+### 9.2. Если что-то не работает
+
+- Проверить логи: `docker compose logs <имя-сервиса>`
+- Проверить сети: `docker network inspect <имя-сети>`
+- Проверить, что Nginx видит бэкенд: `docker exec <nginx-container> ping backend`
+- Проверить CORS: заголовки в ответе API
+
+---
+
+## Часть 10. Дополнительные улучшения (опционально)
+
+### 10.1. Healthcheck для контейнеров
+
+Добавить в `docker-compose.yml`:
+
+```yaml
+backend:
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+postgres:
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+```
+
+И создать эндпоинт `/health` в FastAPI:
+```python
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+```
+
+### 10.2. Rate limiting в Nginx
+
+```nginx
+# Ограничение запросов к API
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+
+location /api/ {
+    limit_req zone=api_limit burst=20 nodelay;
+    proxy_pass http://backend:8000;
+    # ...
+}
+```
+
+---
+
+**Итог:** Приложение переведено в продакшен-режим с единой точкой входа через HTTPS (порт 443). Backend, PostgreSQL и Watchtower работают только внутри Docker-сети. pgAdmin и registry отключены. Прямое подключение к портам 8000, 5432, 5050 возвращает 403 / Connection Refused. Swagger-документация закрыта. Вся функциональность доступна только через фронтенд, проксируемый Nginx. Контейнеры пересобраны и запущены.

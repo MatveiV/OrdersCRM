@@ -3,128 +3,174 @@
 **Цель:** Показать структуру базы данных и связи между таблицами
 
 ```mermaid
-classDiagram
-    class LEADS
-    LEADS : +int id
-    LEADS : +string first_name
-    LEADS : +string last_name
-    LEADS : +string middle_name
-    LEADS : +string contact_data
-    LEADS : +string business_niche
-    LEADS : +string company_size
-    LEADS : +string task_volume
-    LEADS : +string role
-    LEADS : +string business_info
-    LEADS : +string budget
-    LEADS : +string project_deadline
-    LEADS : +string task_type
-    LEADS : +string product_interest
-    LEADS : +string preferred_contact_method
-    LEADS : +string convenient_time
-    LEADS : +string comment
-    LEADS : +string created_at
-    LEADS : +string updated_at
+erDiagram
+    LEADS {
+        int id PK
+        varchar first_name
+        varchar last_name
+        varchar middle_name
+        text contact_data
+        varchar business_niche
+        varchar company_size
+        varchar task_volume
+        varchar role
+        text business_info
+        varchar budget
+        varchar project_deadline
+        varchar task_type
+        varchar product_interest
+        varchar preferred_contact_method
+        varchar convenient_time
+        text comment
+        varchar priority
+        varchar status
+        text planned_start
+        text planned_end
+        varchar assigned_to
+        float estimated_cost
+        float actual_cost
+        varchar payment_status
+        timestamp created_at
+        timestamp updated_at
+    }
 
-    class BEHAVIORS
-    BEHAVIORS : +int lead_id
-    BEHAVIORS : +float time_spent_seconds
-    BEHAVIORS : +string buttons_clicked
-    BEHAVIORS : +string cursor_hover_zones
-    BEHAVIORS : +int return_count
-    BEHAVIORS : +int page_views
-    BEHAVIORS : +float scroll_depth_percent
-    BEHAVIORS : +string device_type
-    BEHAVIORS : +string browser
-    BEHAVIORS : +string os
-    BEHAVIORS : +string screen_resolution
-    BEHAVIORS : +string ip_address
-    BEHAVIORS : +string user_agent
-    BEHAVIORS : +string referrer
-    BEHAVIORS : +string utm_source
-    BEHAVIORS : +string utm_medium
-    BEHAVIORS : +string utm_campaign
-    BEHAVIORS : +string created_at
-    BEHAVIORS : +string updated_at
+    BEHAVIORS {
+        int lead_id PK,FK
+        float time_spent_seconds
+        text buttons_clicked
+        text cursor_hover_zones
+        int return_count
+        int page_views
+        float scroll_depth_percent
+        varchar device_type
+        varchar browser
+        varchar os
+        varchar screen_resolution
+        varchar ip_address
+        text user_agent
+        varchar referrer
+        varchar utm_source
+        varchar utm_medium
+        varchar utm_campaign
+        timestamp created_at
+        timestamp updated_at
+    }
 
-    class ADMIN_DATA
-    ADMIN_DATA : +int id
-    ADMIN_DATA : +string service_name
-    ADMIN_DATA : +string budget_range
-    ADMIN_DATA : +string available_products
-    ADMIN_DATA : +string contact_methods
-    ADMIN_DATA : +string form_settings
-    ADMIN_DATA : +string ui_config
-    ADMIN_DATA : +bool is_active
-    ADMIN_DATA : +string created_at
-    ADMIN_DATA : +string updated_at
+    ADMIN_USERS {
+        int id PK
+        varchar username UK
+        varchar password_hash
+        boolean is_active
+        timestamp created_at
+    }
 
-    LEADS "1" -- "1" BEHAVIORS : has
+    ADMIN_DATA {
+        int id PK
+        text service_name
+        text budget_range
+        text available_products
+        text contact_methods
+        jsonb form_settings
+        jsonb ui_config
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ADMIN_SETTINGS {
+        int id PK
+        varchar service_name
+        text budget_range
+        varchar task_type
+        varchar product_interest
+        text description
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    APPLICATIONS {
+        int id PK
+        varchar first_name
+        varchar last_name
+        varchar middle_name
+        text contact_data
+        varchar business_niche
+        varchar company_size
+        varchar task_volume
+        varchar role
+        text business_info
+        varchar budget
+        varchar project_deadline
+        varchar task_type
+        varchar product_interest
+        varchar preferred_contact_method
+        varchar convenient_time
+        text comment
+        varchar status
+        text notes
+        timestamp created_at
+    }
+
+    BEHAVIOR_METRICS {
+        int id PK
+        int application_id
+        int time_on_page
+        text buttons_clicked
+        text cursor_positions
+        int return_frequency
+        timestamp created_at
+    }
+
+    LEADS ||--|| BEHAVIORS : "1-to-1"
+    LEADS ||--o{ APPLICATIONS : "авто-создание"
 ```
 
 ## Описание таблиц
 
 ### LEADS
 
-| Колонка | Тип | Ограничения | Описание |
-|---------|-----|-------------|----------|
-| id | SERIAL | PK | Уникальный идентификатор |
-| first_name | VARCHAR(255) | NOT NULL | Имя клиента |
-| last_name | VARCHAR(255) | NOT NULL | Фамилия клиента |
-| middle_name | VARCHAR(255) | | Отчество клиента |
-| contact_data | TEXT | NOT NULL | Email или телефон |
-| business_niche | VARCHAR(255) | | Ниша бизнеса |
-| company_size | VARCHAR(100) | | Размер компании |
-| task_volume | VARCHAR(255) | | Объём задачи |
-| role | VARCHAR(100) | | Роль (Сотрудник/Руководитель) |
-| business_info | TEXT | | Информация о бизнесе |
-| budget | VARCHAR(100) | | Бюджет |
-| project_deadline | VARCHAR(255) | | Срок реализации |
-| task_type | VARCHAR(255) | | Тип задачи |
-| product_interest | VARCHAR(255) | | Интересующий продукт |
-| preferred_contact_method | VARCHAR(100) | | Способ связи |
-| convenient_time | VARCHAR(100) | | Удобное время |
-| comment | TEXT | | Комментарий |
-| created_at | TEXT | | Дата создания |
-| updated_at | TEXT | | Дата обновления |
+| Колонка | Тип | Описание |
+|---------|-----|----------|
+| id | SERIAL PK | Уникальный идентификатор |
+| first_name | VARCHAR(255) | Имя клиента |
+| last_name | VARCHAR(255) | Фамилия |
+| contact_data | TEXT | Email/телефон |
+| priority | VARCHAR | Приоритет (low/medium/high) |
+| status | VARCHAR | Статус (Новая/В работе/Архив) |
+| planned_start/end | TEXT | Планируемые даты |
+| assigned_to | VARCHAR | Ответственный |
+| estimated/actual_cost | FLOAT | Смета/факт |
+| payment_status | VARCHAR | Статус оплаты |
 
 ### BEHAVIORS
 
-| Колонка | Тип | Ограничения | Описание |
-|---------|-----|-------------|----------|
-| lead_id | INTEGER | PK, FK → leads.id | Связь с лидом |
-| time_spent_seconds | FLOAT | | Время на странице |
-| buttons_clicked | TEXT | | JSON кликов |
-| cursor_hover_zones | TEXT | | JSON hover-зон |
-| return_count | INTEGER | DEFAULT 0 | Количество возвратов |
-| page_views | INTEGER | DEFAULT 0 | Количество просмотров |
-| scroll_depth_percent | FLOAT | | Глубина скролла |
-| device_type | VARCHAR(50) | | Тип устройства |
-| browser | VARCHAR(100) | | Браузер |
-| os | VARCHAR(100) | | Операционная система |
-| screen_resolution | VARCHAR(20) | | Разрешение экрана |
-| ip_address | VARCHAR(45) | | IP адрес |
-| user_agent | TEXT | | User-Agent строка |
-| referrer | VARCHAR(500) | | Реферер |
-| utm_source | VARCHAR(255) | | UTM source |
-| utm_medium | VARCHAR(255) | | UTM medium |
-| utm_campaign | VARCHAR(255) | | UTM campaign |
-| created_at | TEXT | | Дата создания |
-| updated_at | TEXT | | Дата обновления |
+1:1 связь с LEADS по lead_id.
+
+### ADMIN_USERS
+
+| Колонка | Тип | Описание |
+|---------|-----|----------|
+| username | VARCHAR(255) UK | Логин администратора |
+| password_hash | VARCHAR(255) | bcrypt хеш |
+| is_active | BOOLEAN | Активен |
 
 ### ADMIN_DATA
 
-| Колонка | Тип | Ограничения | Описание |
-|---------|-----|-------------|----------|
-| id | SERIAL | PK | Уникальный идентификатор |
-| service_name | TEXT | | Список услуг (через запятую) |
-| budget_range | TEXT | | JSON диапазона бюджета |
-| available_products | TEXT | | Список продуктов |
-| contact_methods | TEXT | | Способы связи |
-| form_settings | TEXT | | Настройки формы |
-| ui_config | TEXT | | Конфигурация UI |
-| is_active | BOOLEAN | DEFAULT TRUE | Активная запись |
-| created_at | TEXT | | Дата создания |
-| updated_at | TEXT | | Дата обновления |
+Настройки для клиентского фронтенда.
+
+### ADMIN_SETTINGS
+
+Услуги компании (CRUD через админ-панель).
+
+### APPLICATIONS
+
+Структурированные заявки для CRM. Авто-создаются при POST /api/leads/.
+Поле `scoring` — runtime (не хранится в БД).
+
+### BEHAVIOR_METRICS
+
+Анонимные метрики, INSERT-only, без FK.
 
 ## Индексы
 
@@ -133,3 +179,6 @@ classDiagram
 | leads | idx_leads_created_at | created_at DESC |
 | leads | idx_leads_last_name | last_name |
 | behaviors | idx_behaviors_lead_id | lead_id |
+| admin_settings | idx_admin_settings_service_name | service_name |
+| behavior_metrics | idx_metrics_created_at | created_at DESC |
+| applications | idx_applications_status | status |

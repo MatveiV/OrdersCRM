@@ -11,25 +11,22 @@ C4Container
     Person(admin, "Администратор", "Управление системой")
 
     System_Boundary(docker, "Docker Host (185.87.48.13)") {
-        Container(nginx, "Nginx", "nginx:alpine", "Reverse proxy, SSL, статика")
-        Container(frontend_client, "Client Frontend", "Vite + Vanilla JS", "Лендинг: Hero, проекты, форма")
-        Container(frontend_admin, "Admin Frontend", "Vite + Vanilla JS", "Админ-панель")
-        Container(backend, "Backend API", "Python 3.12 + FastAPI", "REST API, бизнес-логика")
-        ContainerDb(postgres, "PostgreSQL", "postgres:16-alpine", "crm_db")
-        Container(pgadmin, "pgAdmin", "dpage/pgadmin4", "Веб-интерфейс БД")
-        Container(registry, "Docker Registry", "registry:2", "Локальный реестр")
+        Container(nginx, "Nginx", "nginx:alpine", "Reverse proxy, SSL, статика, rate-limit, блокировка /docs")
+        Container(frontend_client, "Client Frontend", "Vite + Vanilla JS", "Лендинг + трекинг поведения")
+        Container(frontend_admin, "Admin Frontend", "Vite + Vanilla JS", "SPA: 4 вкладки, JWT-авторизация")
+        Container(backend, "Backend API", "Python 3.12 + FastAPI", "REST API, JWT, скоринг, 7 моделей")
+        ContainerDb(postgres, "PostgreSQL", "postgres:16-alpine", "crm_db: 7 таблиц")
+        Container(watchtower, "Watchtower", "containrrr/watchtower", "Авто-обновление")
     }
 
-    Rel(customer, nginx, "HTTPS:443", "Просмотр лендинга, отправка формы")
-    Rel(admin, nginx, "HTTPS:443", "Доступ к /admin, /docs")
-    Rel(admin, pgadmin, "HTTPS:5050", "Управление БД")
-    Rel(nginx, frontend_client, "Внутренний", "Раздача статики /")
-    Rel(nginx, frontend_admin, "Внутренний", "Раздача статики /admin")
-    Rel(nginx, backend, "HTTP:8000", "Прокси /api/*, /docs, /health")
-    Rel(frontend_client, backend, "HTTP через Nginx", "GET /api/admin/active, POST /api/leads/")
-    Rel(frontend_admin, backend, "HTTP через Nginx", "GET /api/admin/active, POST /api/leads/")
-    Rel(backend, postgres, "TCP:5432", "asyncpg: CRUD операции")
-    Rel(pgadmin, postgres, "TCP:5432", "SQL: управление БД")
+    Rel(customer, nginx, "HTTPS:443", "Лендинг, форма, трекинг")
+    Rel(admin, nginx, "HTTPS:443", "/admin — SPA")
+    Rel(nginx, frontend_client, "Внутренний", "Статика /")
+    Rel(nginx, frontend_admin, "Внутренний", "Статика /admin")
+    Rel(nginx, backend, "HTTP:8000", "Прокси /api/*, /health; 403 на /docs")
+    Rel(frontend_client, backend, "HTTP через Nginx", "POST /api/leads, POST /api/behavior-metrics, GET /api/public/services")
+    Rel(frontend_admin, backend, "HTTP через Nginx", "JWT: /api/auth/*, /api/applications/*, /api/admin/*")
+    Rel(backend, postgres, "TCP:5432", "asyncpg: 7 таблиц")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
@@ -38,18 +35,18 @@ C4Container
 
 | Контейнер | Технология | Порт | Назначение |
 |-----------|------------|------|------------|
-| Nginx | nginx:alpine | 80, 443 | Reverse proxy, SSL termination, раздача статики |
-| Client Frontend | Vite + Vanilla JS | - | Лендинг: Hero-секция, портфолио, форма заявки |
-| Admin Frontend | Vite + Vanilla JS | - | Админ-панель (старая форма) |
-| Backend API | Python 3.12 + FastAPI | 8000 (внутренний) | REST API, валидация, бизнес-логика |
-| PostgreSQL | postgres:16-alpine | 5432 (внутренний) | Хранение лидов, поведений, настроек |
-| pgAdmin | dpage/pgadmin4 | 5050 | Веб-интерфейс для управления БД |
-| Docker Registry | registry:2 | 8080 | Локальный реестр Docker-образов |
+| Nginx | nginx:alpine | 80, 443 | Reverse proxy, SSL, rate-limit (10r/s), security headers, блокировка /docs |
+| Client Frontend | Vite + Vanilla JS | — | Лендинг: Hero, портфолио, форма + трекинг поведения |
+| Admin Frontend | Vite + Vanilla JS | — | SPA: 4 вкладки, JWT, модалки, toast-уведомления |
+| Backend API | Python 3.12 + FastAPI | 8000 (внутр.) | 7 роутеров, JWT, скоринг (8 критериев), агрегация |
+| PostgreSQL | postgres:16-alpine | 5432 (внутр.) | leads, behaviors, admin_users, admin_data, admin_settings, applications, behavior_metrics |
+| Watchtower | containrrr/watchtower | — | Авто-обновление по расписанию |
 
 ## Потоки данных
 
-1. **Клиент → Лендинг:** HTTPS запрос → Nginx → Client Frontend (статика)
-2. **Клиент → Форма:** Заполнение формы → POST /api/leads/ → Nginx → Backend → PostgreSQL
-3. **Админ → /admin:** HTTPS запрос → Nginx → Admin Frontend (статика)
-4. **Админ → /docs:** HTTPS запрос → Nginx → Backend (Swagger UI)
-5. **Backend → PostgreSQL:** asyncpg подключение → SQL запросы → результаты
+1. **Клиент → Лендинг:** HTTPS → Nginx → статика (Client Frontend)
+2. **Клиент → Форма:** POST /api/leads/ → Nginx → Backend → PostgreSQL (Lead + Application)
+3. **Клиент → Метрики:** POST /api/behavior-metrics/ → Nginx → Backend → PostgreSQL
+4. **Админ → /admin:** HTTPS → Nginx → Admin Frontend (SPA)
+5. **Админ → JWT:** POST /api/auth/login → Nginx → Backend → JWT tokens
+6. **Админ → API:** JWT-запросы → Nginx → Backend (verify JWT) → PostgreSQL

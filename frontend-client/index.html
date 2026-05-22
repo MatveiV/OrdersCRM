@@ -63,35 +63,35 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="first_name">Имя <span class="required">*</span></label>
-                        <input type="text" id="first_name" name="first_name" required placeholder="Ваше имя">
+                        <input type="text" id="first_name" name="first_name" required placeholder="Ваше имя" data-metric-id="first-name">
                         <span class="error-msg"></span>
                     </div>
                     
                     <div class="form-group">
                         <label for="last_name">Фамилия <span class="required">*</span></label>
-                        <input type="text" id="last_name" name="last_name" required placeholder="Ваша фамилия">
+                        <input type="text" id="last_name" name="last_name" required placeholder="Ваша фамилия" data-metric-id="last-name">
                         <span class="error-msg"></span>
                     </div>
                     
                     <div class="form-group">
                         <label for="middle_name">Отчество</label>
-                        <input type="text" id="middle_name" name="middle_name" placeholder="Отчество (необязательно)">
+                        <input type="text" id="middle_name" name="middle_name" placeholder="Отчество (необязательно)" data-metric-id="middle-name">
                     </div>
                     
                     <div class="form-group full-width">
                         <label for="contact_data">Контактные данные <span class="required">*</span></label>
-                        <input type="text" id="contact_data" name="contact_data" required placeholder="Email или телефон">
+                        <input type="text" id="contact_data" name="contact_data" required placeholder="Email или телефон" data-metric-id="contact-data">
                         <span class="error-msg"></span>
                     </div>
                     
                     <div class="form-group">
                         <label for="business_niche">Ниша бизнеса</label>
-                        <input type="text" id="business_niche" name="business_niche" placeholder="Ваша отрасль">
+                        <input type="text" id="business_niche" name="business_niche" placeholder="Ваша отрасль" data-metric-id="business-niche">
                     </div>
                     
                     <div class="form-group">
                         <label for="company_size">Размер компании</label>
-                        <input type="range" id="company_size" name="company_size" min="0" max="4" step="1" value="2">
+                        <input type="range" id="company_size" name="company_size" min="0" max="4" step="1" value="2" data-metric-id="company-size">
                         <div class="range-labels">
                             <span>1-10</span>
                             <span>11-50</span>
@@ -103,7 +103,7 @@
                     
                     <div class="form-group">
                         <label for="task_volume">Объём задачи</label>
-                        <input type="range" id="task_volume" name="task_volume" min="0" max="4" step="1" value="2">
+                        <input type="range" id="task_volume" name="task_volume" min="0" max="4" step="1" value="2" data-metric-id="task-volume">
                         <div class="range-labels">
                             <span>Малый</span>
                             <span>Ниже среднего</span>
@@ -115,7 +115,7 @@
                     
                     <div class="form-group">
                         <label for="role">Ваша роль</label>
-                        <select id="role" name="role">
+                        <select id="role" name="role" data-metric-id="role">
                             <option value="">Выберите роль</option>
                             <option value="Сотрудник">Сотрудник</option>
                             <option value="Руководитель">Руководитель</option>
@@ -124,12 +124,12 @@
                     
                     <div class="form-group full-width">
                         <label for="business_info">Информация о бизнесе</label>
-                        <textarea id="business_info" name="business_info" rows="3" placeholder="Расскажите о вашем бизнесе"></textarea>
+                        <textarea id="business_info" name="business_info" rows="3" placeholder="Расскажите о вашем бизнесе" data-metric-id="business-info"></textarea>
                     </div>
                     
                     <div class="form-group full-width">
                         <label for="budget">Бюджет: <span id="budget-value">500 000 ₽</span></label>
-                        <input type="range" id="budget" name="budget" min="100000" max="5000000" step="100000" value="500000">
+                        <input type="range" id="budget" name="budget" min="100000" max="5000000" step="100000" value="500000" data-metric-id="budget-slider">
                         <div class="budget-labels">
                             <span>100 000 ₽</span>
                             <span>5 000 000 ₽</span>
@@ -138,7 +138,7 @@
                     
                     <div class="form-group">
                         <label for="project_deadline">Срок реализации</label>
-                        <input type="range" id="project_deadline" name="project_deadline" min="1" max="12" step="1" value="3">
+                        <input type="range" id="project_deadline" name="project_deadline" min="1" max="12" step="1" value="3" data-metric-id="deadline-slider">
                         <div class="range-labels">
                             <span>1 нед</span>
                             <span>3 нед</span>
@@ -151,14 +151,14 @@
                     
                     <div class="form-group">
                         <label for="task_type">Тип задачи</label>
-                        <select id="task_type" name="task_type">
+                        <select id="task_type" name="task_type" data-metric-id="task-type">
                             <option value="">Выберите тип</option>
                         </select>
                     </div>
                     
                     <div class="form-group">
                         <label for="product_interest">Интересующий продукт</label>
-                        <select id="product_interest" name="product_interest">
+                        <select id="product_interest" name="product_interest" data-metric-id="product-interest">
                             <option value="">Выберите продукт</option>
                         </select>
                     </div>
@@ -166,10 +166,10 @@
                     <div class="form-group full-width">
                         <label>Предпочтительный способ связи</label>
                         <div class="radio-group">
-                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="email"> Email</label>
-                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="phone"> Телефон</label>
-                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="telegram"> Telegram</label>
-                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="whatsapp"> WhatsApp</label>
+                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="email" data-metric-id="contact-email"> Email</label>
+                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="phone" data-metric-id="contact-phone"> Телефон</label>
+                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="telegram" data-metric-id="contact-telegram"> Telegram</label>
+                            <label class="radio-label"><input type="radio" name="preferred_contact_method" value="whatsapp" data-metric-id="contact-whatsapp"> WhatsApp</label>
                         </div>
                     </div>
                     
@@ -184,7 +184,7 @@
                     </div>
                 </div>
                 
-                <button type="submit" class="submit-btn">
+                <button type="submit" class="submit-btn" data-metric-id="submit-form">
                     <span class="btn-text">Отправить заявку</span>
                     <span class="btn-loader" style="display:none;">Отправка...</span>
                 </button>
@@ -201,6 +201,7 @@
         <p>&copy; 2026 Matvei V. Все права защищены.</p>
     </footer>
     
+    <script type="module" src="/src/tracking/behavior-metrics.js"></script>
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>

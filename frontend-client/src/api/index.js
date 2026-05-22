@@ -1,13 +1,13 @@
 const API_BASE = '/api';
 
-export async function getAdminData() {
+export async function getPublicServices() {
     try {
-        const response = await fetch(`${API_BASE}/admin/active`);
-        if (!response.ok) throw new Error('Failed to fetch admin data');
+        const response = await fetch(`${API_BASE}/public/services`);
+        if (!response.ok) throw new Error('Failed to fetch services');
         return await response.json();
     } catch (error) {
-        console.warn('Admin data unavailable, using defaults:', error);
-        return {};
+        console.warn('Services unavailable, using defaults:', error);
+        return [];
     }
 }
 

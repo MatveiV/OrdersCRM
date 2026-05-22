@@ -12,36 +12,33 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
-      - crm_network
+      - internal
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    labels:
-      - "com.orderscrm.service=postgres"
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: orderscrm_pgadmin
-    env_file:
-      - .env
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    ports:
-      - "${PGADMIN_PORT}:80"
-    networks:
-      - crm_network
-    restart: unless-stopped
-    depends_on:
-      - postgres
-    labels:
-      - "com.orderscrm.service=pgadmin"
+  # DEV ONLY — uncomment for local development
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   container_name: orderscrm_pgadmin
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+  #     PGADMIN_CONFIG_SERVER_MODE: 'False'
+  #   volumes:
+  #     - pgadmin_data:/var/lib/pgadmin
+  #   ports:
+  #     - "${PGADMIN_PORT}:80"
+  #   networks:
+  #     - internal
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - postgres
 
   nginx:
     image: nginx:alpine
@@ -56,12 +53,10 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - certs:/etc/nginx/certs:ro
     networks:
-      - crm_network
+      - internal
     restart: unless-stopped
     depends_on:
-      - postgres
-    labels:
-      - "com.orderscrm.service=nginx"
+      - backend
 
   backend:
     build:
@@ -75,34 +70,35 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES}
       JWT_REFRESH_TOKEN_EXPIRE_DAYS: ${JWT_REFRESH_TOKEN_EXPIRE_DAYS}
+      DISABLE_DOCS: ${DISABLE_DOCS}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: ${ENVIRONMENT}
     networks:
-      - crm_network
+      - internal
     restart: unless-stopped
     depends_on:
-      - postgres
-    labels:
-      - "com.orderscrm.service=backend"
+      postgres:
+        condition: service_healthy
 
-  registry:
-    image: registry:2
-    container_name: orderscrm_registry
-    env_file:
-      - .env
-    environment:
-      REGISTRY_AUTH: htpasswd
-      REGISTRY_AUTH_HTPASSWD_REALM: "Docker Registry"
-      REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.htpasswd
-      REGISTRY_STORAGE_DELETE_ENABLED: "true"
-    volumes:
-      - registry_data:/var/lib/registry
-      - ./registry/auth:/auth
-    ports:
-      - "8080:5000"
-    networks:
-      - crm_network
-    restart: unless-stopped
-    labels:
-      - "com.orderscrm.service=registry"
+  # DEV ONLY — uncomment for local development
+  # registry:
+  #   image: registry:2
+  #   container_name: orderscrm_registry
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     REGISTRY_AUTH: htpasswd
+  #     REGISTRY_AUTH_HTPASSWD_REALM: "Docker Registry"
+  #     REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.htpasswd
+  #     REGISTRY_STORAGE_DELETE_ENABLED: "true"
+  #   volumes:
+  #     - registry_data:/var/lib/registry
+  #     - ./registry/auth:/auth
+  #   ports:
+  #     - "8080:5000"
+  #   networks:
+  #     - internal
+  #   restart: unless-stopped
 
   watchtower:
     image: containrrr/watchtower:latest
@@ -116,18 +112,14 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - crm_network
+      - internal
     restart: unless-stopped
-    labels:
-      - "com.orderscrm.service=watchtower"
 
 networks:
-  crm_network:
+  internal:
     driver: bridge
     internal: false
 
 volumes:
   postgres_data:
-  pgadmin_data:
-  registry_data:
   certs:

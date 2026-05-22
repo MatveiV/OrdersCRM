@@ -56,6 +56,14 @@ class LeadModel(Base):
     preferred_contact_method = Column(String(100), nullable=True)
     convenient_time = Column(String(100), nullable=True)
     comment = Column(Text, nullable=True)
+    priority = Column(String(20), default="medium")
+    status = Column(String(20), default="new")
+    planned_start_date = Column(Text, nullable=True)
+    planned_end_date = Column(Text, nullable=True)
+    assigned_to = Column(String(255), nullable=True)
+    estimated_cost = Column(Integer, nullable=True)
+    actual_cost = Column(Integer, nullable=True)
+    payment_status = Column(String(20), default="unpaid")
     created_at = Column(Text, default=lambda: datetime.now().isoformat())
     updated_at = Column(Text, default=lambda: datetime.now().isoformat(), onupdate=lambda: datetime.now().isoformat())
 
@@ -98,6 +106,14 @@ class LeadUpdate(BaseModel):
     preferred_contact_method: Optional[str] = None
     convenient_time: Optional[str] = None
     comment: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    planned_start_date: Optional[str] = None
+    planned_end_date: Optional[str] = None
+    assigned_to: Optional[str] = None
+    estimated_cost: Optional[int] = None
+    actual_cost: Optional[int] = None
+    payment_status: Optional[str] = None
 
 
 class LeadResponse(BaseModel):
@@ -118,6 +134,14 @@ class LeadResponse(BaseModel):
     preferred_contact_method: Optional[str] = None
     convenient_time: Optional[str] = None
     comment: Optional[str] = None
+    priority: str = "medium"
+    status: str = "new"
+    planned_start_date: Optional[str] = None
+    planned_end_date: Optional[str] = None
+    assigned_to: Optional[str] = None
+    estimated_cost: Optional[int] = None
+    actual_cost: Optional[int] = None
+    payment_status: str = "unpaid"
     created_at: str
     updated_at: str
 

@@ -1,6 +1,6 @@
 # UML Sequence Diagram — Lead Submission
 
-**Цель:** Показать процесс отправки заявки клиентом
+**Цель:** Показать процесс отправки заявки клиентом и последующей обработки
 
 ```mermaid
 sequenceDiagram
@@ -13,66 +13,81 @@ sequenceDiagram
     participant L as LocalStorage
 
     Note over C,L: 1. Загрузка страницы
-    C->>F: Открывает https://185.87.48.13
+    C->>F: Открывает https://orderscrm.ru
     F->>F: initAnimatedBackground()
     F->>F: renderProjects()
+    F->>F: initBehaviorTracking()
     F->>N: GET /api/admin/active
-    N->>B: Прокси /api/admin/active → backend:8000
+    N->>B: Прокси → backend:8000
     B->>D: SELECT * FROM admin_data WHERE is_active = TRUE
-    D-->>B: AdminData (service_name, budget_range, products)
+    D-->>B: AdminData (services, budget, products)
     B-->>N: 200 OK + JSON
     N-->>F: JSON
     F->>F: populateDynamicFields(adminData)
     F->>F: initScrollAnimations()
 
-    Note over C,L: 2. Трекинг поведения
+    Note over C,L: 2. Трекинг поведения (каждые 60с)
     C->>F: Кликает, скроллит, наводит курсор
-    F->>F: BehaviorTracker: записывает события
-    F->>L: Сохраняет return_count
+    F->>F: behavior-metrics.js: запись в буфер
+    F->>N: POST /api/behavior-metrics/ (time_on_page, buttons, cursor)
+    N->>B: Прокси
+    B->>D: INSERT INTO behavior_metrics
+    D-->>B: OK
+    B-->>N: 201 Created
+    N-->>F: JSON
 
     Note over C,L: 3. Заполнение формы
-    C->>F: Заполняет поля формы
-    F->>F: Валидация: first_name, last_name, contact_data
-    F->>F: Обновление значений range-слайдеров
+    C->>F: Заполняет поля
+    F->>F: Валидация first_name, last_name, contact_data
+    F->>F: Обновление range-слайдеров
 
     Note over C,L: 4. Отправка заявки
     C->>F: Нажимает "Отправить заявку"
     F->>F: validateForm()
-    F->>F: Собирает leadData из FormData
-    F->>F: Собирает behaviorData из BehaviorTracker
-    F->>F: payload = { ...leadData, ...behaviorData }
+    F->>F: payload = { leadData, behaviorData }
     F->>N: POST /api/leads/ (JSON)
-    N->>B: Прокси POST → backend:8000/api/leads/
-    B->>B: Pydantic: LeadCreate.model_validate(payload)
-    Note over B: extra="ignore" — игнорирует поля трекинга
+    N->>B: Прокси → backend:8000
+    B->>B: Pydantic: LeadCreate.model_validate()
     B->>D: INSERT INTO leads (...) VALUES (...)
-    D-->>B: RETURNING * (новый lead_id)
-    B->>D: INSERT INTO behaviors (lead_id, time_spent_seconds, ...) VALUES (...)
-    D-->>B: RETURNING *
+    D-->>B: RETURNING lead_id
+    B->>B: ApplicationCreate из leadData
+    B->>D: INSERT INTO applications (...) VALUES (...)
+    D-->>B: RETURNING app_id
+    B->>D: INSERT INTO behaviors (lead_id, ...)
+    D-->>B: OK
     B-->>N: 201 Created + LeadResponse JSON
-    N-->>F: 201 Created + JSON
-    F->>F: form.style.display = 'none'
-    F->>F: success-message.style.display = 'block'
-    F-->>C: "Заявка отправлена!"
+    N-->>F: JSON
+    F->>F: Скрыть форму, показать "Заявка отправлена!"
+    F-->>C: Сообщение об успехе
 
-    Note over C,L: 5. Сохранение возврата
-    C->>L: beforeunload: return_count++
+    Note over C,L: 5. Фоновая отправка метрик
+    C->>L: beforeunload: sendBeacon()
+    L->>N: navigator.sendBeacon (метрики)
+    N->>B: POST /api/behavior-metrics/
+    B->>D: INSERT INTO behavior_metrics
 ```
 
 ## Этапы процесса
 
 | # | Этап | Описание |
 |---|------|----------|
-| 1 | Загрузка страницы | Инициализация анимаций, проектов, загрузка AdminData |
-| 2 | Трекинг поведения | Запись кликов, скролла, hover-зон, возвратов |
-| 3 | Заполнение формы | Валидация обязательных полей, обновление слайдеров |
-| 4 | Отправка заявки | POST /api/leads/ с lead + behavior данными |
-| 5 | Сохранение возврата | Увеличение return_count в localStorage |
+| 1 | Загрузка страницы | Инициализация анимаций, проектов, трекинга, загрузка AdminData |
+| 2 | Фоновый трекинг | Каждые 60с: time_on_page, buttons, cursor_positions → behavior_metrics |
+| 3 | Заполнение формы | Валидация полей, слайдеры |
+| 4 | Отправка заявки | Lead → Application (авто) → Behavior → ответ |
+| 5 | Закрытие страницы | sendBeacon с финальными метриками |
+
+## Авто-создание Application
+
+При создании Lead, бэкенд автоматически создаёт запись в `applications` с теми же данными. Это позволяет:
+- Разделить сырые лиды (лендинг) и структурированные заявки (CRM)
+- Применить скоринг к заявкам без изменения логики лендинга
+- Вести независимый статус и заметки в CRM
 
 ## Обработка ошибок
 
 | Ошибка | Причина | Действие |
 |--------|---------|----------|
-| 422 Unprocessable Entity | Невалидные данные | Показать ошибку валидации |
-| 500 Internal Server Error | Ошибка БД | Показать "Произошла ошибка" |
+| 422 | Невалидные данные | Показать ошибку валидации |
+| 500 | Ошибка БД | Показать "Произошла ошибка" |
 | Network Error | Нет соединения | Показать "Попробуйте позже" |
