@@ -3,62 +3,62 @@
 **Цель:** Показать структуру базы данных и связи между таблицами
 
 ```mermaid
-erDiagram
-    LEADS {
-        int id PK
-        varchar first_name NN
-        varchar last_name NN
-        varchar middle_name
-        text contact_data NN
-        varchar business_niche
-        varchar company_size
-        varchar task_volume
-        varchar role
-        text business_info
-        varchar budget
-        varchar project_deadline
-        varchar task_type
-        varchar product_interest
-        varchar preferred_contact_method
-        varchar convenient_time
-        text comment
-        text created_at
-        text updated_at
-    }
-    BEHAVIORS {
-        int lead_id PK FK
-        float time_spent_seconds
-        text buttons_clicked
-        text cursor_hover_zones
-        int return_count
-        int page_views
-        float scroll_depth_percent
-        varchar device_type
-        varchar browser
-        varchar os
-        varchar screen_resolution
-        varchar ip_address
-        text user_agent
-        varchar referrer
-        varchar utm_source
-        varchar utm_medium
-        varchar utm_campaign
-        text created_at
-        text updated_at
-    }
-    ADMIN_DATA {
-        int id PK
-        text service_name
-        text budget_range
-        text available_products
-        text contact_methods
-        text form_settings
-        text ui_config
-        bool is_active
-        text created_at
-        text updated_at
-    }
-    LEADS ||--|| BEHAVIORS : "1-to-1 ON DELETE CASCADE"
+classDiagram
+    class LEADS
+    LEADS : +int id
+    LEADS : +string first_name
+    LEADS : +string last_name
+    LEADS : +string middle_name
+    LEADS : +string contact_data
+    LEADS : +string business_niche
+    LEADS : +string company_size
+    LEADS : +string task_volume
+    LEADS : +string role
+    LEADS : +string business_info
+    LEADS : +string budget
+    LEADS : +string project_deadline
+    LEADS : +string task_type
+    LEADS : +string product_interest
+    LEADS : +string preferred_contact_method
+    LEADS : +string convenient_time
+    LEADS : +string comment
+    LEADS : +string created_at
+    LEADS : +string updated_at
+
+    class BEHAVIORS
+    BEHAVIORS : +int lead_id
+    BEHAVIORS : +float time_spent_seconds
+    BEHAVIORS : +string buttons_clicked
+    BEHAVIORS : +string cursor_hover_zones
+    BEHAVIORS : +int return_count
+    BEHAVIORS : +int page_views
+    BEHAVIORS : +float scroll_depth_percent
+    BEHAVIORS : +string device_type
+    BEHAVIORS : +string browser
+    BEHAVIORS : +string os
+    BEHAVIORS : +string screen_resolution
+    BEHAVIORS : +string ip_address
+    BEHAVIORS : +string user_agent
+    BEHAVIORS : +string referrer
+    BEHAVIORS : +string utm_source
+    BEHAVIORS : +string utm_medium
+    BEHAVIORS : +string utm_campaign
+    BEHAVIORS : +string created_at
+    BEHAVIORS : +string updated_at
+
+    class ADMIN_DATA
+    ADMIN_DATA : +int id
+    ADMIN_DATA : +string service_name
+    ADMIN_DATA : +string budget_range
+    ADMIN_DATA : +string available_products
+    ADMIN_DATA : +string contact_methods
+    ADMIN_DATA : +string form_settings
+    ADMIN_DATA : +string ui_config
+    ADMIN_DATA : +bool is_active
+    ADMIN_DATA : +string created_at
+    ADMIN_DATA : +string updated_at
+
+    LEADS "1" -- "1" BEHAVIORS : has
 ```
 
 ## Описание таблиц
